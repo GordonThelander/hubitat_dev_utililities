@@ -13,6 +13,20 @@ The method combines:
 
 The included `TransactionalBoundedAsyncDiscoveryHarness.groovy` is an isolated Hubitat test application for the concurrency and recovery mechanics. It does not enumerate real devices or installed applications.
 
+## Origin
+
+The bounded-async architecture, and the core insight behind its state-isolation design, come
+from hubitrep's `HubDiagnostics` app (`github.com/hubitrep/hubitat`). A data-integrity bug in an
+early implementation traced back to hubitrep's own documented fix for the same platform behavior:
+concurrent `asynchttpGet` callbacks racing on Hubitat `state`. Their fix keeps real results out of
+`state` entirely, in a disposable field instead - acceptable for an on-demand audit tool whose
+data does not need to survive a reboot.
+
+This pattern extends that insight for applications where the result must be durable: per-attempt
+claims, exclusive ownership, missing-callback recovery, and invariant-checked scheduled
+publication replace the disposable-field approach with one that can't lose or corrupt a result
+that has to persist.
+
 ## Previous serial method
 
 The previous discovery method was a blocking, serial crawl:
