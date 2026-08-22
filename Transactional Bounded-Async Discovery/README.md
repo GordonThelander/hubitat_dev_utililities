@@ -38,7 +38,7 @@ The previous discovery method was a blocking, serial crawl:
 5. fetch and parse one installed application at a time;
 6. build the result after the final request.
 
-That design is straightforward but spends most of its elapsed time waiting for independent loopback HTTP requests. It can also repeat the same work—for example, fetching capabilities separately for many devices that share one driver.
+That design is straightforward but spends most of its elapsed time waiting for independent loopback HTTP requests. It can also repeat the same work, for example fetching capabilities separately for many devices that share one driver.
 
 The updated method first reduces the amount of work:
 
@@ -96,7 +96,7 @@ The claim exists before `asynchttpGet` is called, so every accepted or failed di
 
 ### 2. Synchronous-dispatch rollback
 
-`asynchttpGet` can throw before a request is accepted—for example, while coercing an invalid parameter. Every dispatch is therefore wrapped in `try/catch`.
+`asynchttpGet` can throw before a request is accepted, for example while coercing an invalid parameter. Every dispatch is therefore wrapped in `try/catch`.
 
 On a synchronous exception, the dispatcher atomically removes its exact claim, releases the reserved slot, and either requeues the work or records terminal failure. Pipeline refill is iterative rather than recursive, preventing repeated dispatch rejection from growing the call stack.
 
