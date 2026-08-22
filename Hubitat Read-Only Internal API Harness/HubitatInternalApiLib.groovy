@@ -28,7 +28,7 @@ library(
     author: 'Gordon Thelander',
     description: 'Read-only wrapper for undocumented Hubitat internal introspection endpoints (hub/device/app/driver/library JSON, health telemetry) with firmware lookup and secret redaction.',
     category: 'Utility',
-    documentationLink: 'https://github.com/GordonThelander/hubitat_dev_utililities/tree/main/Hubitat%20Read-Only%20Internal%20API'
+    documentationLink: 'https://github.com/GordonThelander/hubitat_dev_utililities/tree/main/Hubitat%20Read-Only%20Internal%20API%20Harness'
 )
 
 import groovy.transform.Field

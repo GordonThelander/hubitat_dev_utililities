@@ -1,6 +1,6 @@
-# Hubitat Read-Only Internal API
+# Hubitat Read-Only Internal API Harness
 
-A reusable Hubitat Groovy Library and companion tester for undocumented, read-only internal endpoints used by the Hubitat administration interface.
+A reusable Hubitat Groovy Library and verification harness for undocumented, read-only internal endpoints used by the Hubitat administration interface.
 
 The utility provides a single abstraction for introspection under `/hub`, `/hub2`, `/device`, `/installedapp`, `/app`, `/driver`, and `/library`. It deliberately excludes code updates, deletion, reboot, radio/network configuration, factory reset, and every other mutation or administrative operation.
 
