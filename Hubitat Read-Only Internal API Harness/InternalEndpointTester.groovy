@@ -250,6 +250,18 @@ List buildEndpointList() {
             expected: "Any"
         ],
         [
+            name: "Free OS memory history (candidate)",
+            path: "/hub/advanced/freeOSMemoryHistory",
+            expected: "Any",
+            candidate: true
+        ],
+        [
+            name: "Latest free OS memory (candidate)",
+            path: "/hub/advanced/freeOSMemoryLast",
+            expected: "Any",
+            candidate: true
+        ],
+        [
             name: "Database size",
             path: "/hub/advanced/databaseSize",
             expected: "Any"
@@ -258,6 +270,36 @@ List buildEndpointList() {
             name: "Internal temperature",
             path: "/hub/advanced/internalTempCelsius",
             expected: "Any"
+        ],
+        [
+            name: "Z-Wave details (candidate)",
+            path: "/hub/zwaveDetails/json",
+            expected: "ListOrMap",
+            candidate: true
+        ],
+        [
+            name: "Zigbee details (candidate)",
+            path: "/hub/zigbeeDetails/json",
+            expected: "ListOrMap",
+            candidate: true
+        ],
+        [
+            name: "Matter details (candidate)",
+            path: "/hub/matterDetails/json",
+            expected: "ListOrMap",
+            candidate: true
+        ],
+        [
+            name: "Zigbee child and route information (candidate)",
+            path: "/hub/zigbee/getChildAndRouteInfo",
+            expected: "String",
+            candidate: true
+        ],
+        [
+            name: "Zigbee child and route JSON (candidate)",
+            path: "/hub/zigbee/getChildAndRouteInfoJson",
+            expected: "ListOrMap",
+            candidate: true
         ],
         [
             name: "Device list",
@@ -290,9 +332,33 @@ List buildEndpointList() {
             expected: "ListOrMap"
         ],
         [
+            name: "User driver types (candidate)",
+            path: "/hub2/userDeviceTypes",
+            expected: "ListOrMap",
+            candidate: true
+        ],
+        [
             name: "Rooms",
             path: "/hub2/roomsList",
             expected: "ListOrMap"
+        ],
+        [
+            name: "Hub data (candidate)",
+            path: "/hub2/hubData",
+            expected: "Map",
+            candidate: true
+        ],
+        [
+            name: "Hub Mesh data (candidate)",
+            path: "/hub2/hubMeshJson",
+            expected: "ListOrMap",
+            candidate: true
+        ],
+        [
+            name: "Network configuration (candidate, sensitive)",
+            path: "/hub2/networkConfiguration",
+            expected: "Map",
+            candidate: true
         ]
     ]
 
@@ -369,7 +435,8 @@ void runNextEndpointTest() {
     Map callbackData = [
         name: endpoint.name,
         path: endpoint.path,
-        expected: endpoint.expected
+        expected: endpoint.expected,
+        candidate: endpoint.candidate == true
     ]
 
     Map requestParameters = [
@@ -397,15 +464,17 @@ void endpointTestCallback(response, Map callbackData) {
     String name = callbackData.name ?: "Unknown endpoint"
     String path = callbackData.path ?: ""
     String expected = callbackData.expected ?: "Any"
+    Boolean candidate = callbackData.candidate == true
+    String unavailableLevel = candidate ? "CHECK" : "FAIL"
 
     try {
         if (response == null) {
             appendResult(
-                "FAIL: ${name} - no HTTP response"
+                "${unavailableLevel}: ${name} - no HTTP response"
             )
         } else if (response.hasError()) {
             appendResult(
-                "FAIL: ${name} - ${safeMessage(response.getErrorMessage())}"
+                "${unavailableLevel}: ${name} - ${safeMessage(response.getErrorMessage())}"
             )
         } else {
             Integer status = response.status as Integer
@@ -414,7 +483,7 @@ void endpointTestCallback(response, Map callbackData) {
 
             if (status != 200) {
                 appendResult(
-                    "FAIL: ${name} - HTTP ${status}"
+                    "${unavailableLevel}: ${name} - HTTP ${status}"
                 )
             } else if (responseData == null) {
                 appendResult(

@@ -135,6 +135,53 @@ Tier definitions:
 - **Tier 1:** undocumented read-only endpoint with established ecosystem usage.
 - **Tier 2:** undocumented, read-only administration-interface implementation endpoint with greater response-shape risk.
 
+## Candidate endpoints awaiting live verification
+
+The standalone tester now probes the following additional endpoints. They are not yet exposed by
+`HubitatInternalApiLib.groovy`. A missing endpoint, unsupported radio, or unexpected response is
+reported as **CHECK** rather than **FAIL** until the path has been verified on representative hubs.
+
+| Path | Expected content | Evidence and caution |
+|---|---|---|
+| `/hub/advanced/freeOSMemoryHistory` | Historical memory data, often text or CSV | Long-standing community usage |
+| `/hub/advanced/freeOSMemoryLast` | Latest free-memory value | Used by current diagnostic utilities |
+| `/hub/zwaveDetails/json` | Z-Wave inventory and radio details | Radio and firmware dependent |
+| `/hub/zigbeeDetails/json` | Zigbee inventory and radio details | Radio and firmware dependent |
+| `/hub/matterDetails/json` | Matter inventory and fabric status | May be absent when Matter is unavailable |
+| `/hub/zigbee/getChildAndRouteInfo` | Zigbee child and route text | Established community usage |
+| `/hub/zigbee/getChildAndRouteInfoJson` | JSON route-data variant | Possible firmware-dependent alternative |
+| `/hub2/userDeviceTypes` | User driver-code definitions | Used by HPM and multiple community tools |
+| `/hub2/hubData` | Hub identity, platform and radio information | Sensitive hub metadata |
+| `/hub2/hubMeshJson` | Hub Mesh peers and linkage data | Sensitive topology metadata |
+| `/hub2/networkConfiguration` | IP, gateway and DNS configuration | Highly sensitive network metadata |
+
+Only response status and general type are retained by the tester. Even so, run it only on an
+authorized development hub because the response bodies exist briefly in memory and may contain
+private infrastructure information.
+
+## Known endpoints deliberately not tested
+
+Public source contains additional internal paths whose names or usage suggest an active operation,
+administrative mutation, radio work, or another effect beyond passive introspection. They are kept
+here as research leads rather than silently discarded, but the read-only harness must not call them
+until their behavior is separately established.
+
+| Endpoint or family | Warning |
+|---|---|
+| `/hub/cloud/checkForUpdate` | May initiate a cloud firmware check rather than only return cached status |
+| `/hub/zigbeeChannelScanJson` | May initiate or depend on active Zigbee channel scanning |
+| `/app/edit/update` and equivalent App Code save paths | Mutates installed source code |
+| `/hub/advanced/deleteScheduledJob?id=...` | Deletes scheduled work |
+| Backup creation, restoration or deletion endpoints | Can alter or replace durable hub data |
+| Radio enable, disable, reset, inclusion, exclusion and configuration endpoints | Can disrupt the Zigbee or Z-Wave network |
+| Reboot, shutdown, network-save and factory-reset endpoints | Administrative operations with potentially severe impact |
+
+Potentially passive but especially sensitive candidates such as `/logs/json`, `/logs/past/json`,
+`/hub/eventsJson`, `/hub/mdnsDevices/json`, `/hub2/localBackups`, `/hub2/cloudBackups`,
+`/hub2/userLibraries`, `/hub2/userBundles`, `/app/list/data`, `/driver/list/data`, and
+`/installedapp/configure/json/{id}` remain documented research candidates for a later, separately
+approved tester expansion. They are not called by this revision.
+
 ## In-process helpers
 
 These helpers do not make HTTP calls:
@@ -158,7 +205,11 @@ Each device/app helper fails defensively and returns `null` when the property is
 
 ## Verification status
 
-On 22 August 2026, all 17 endpoint paths were exercised twice on a Hubitat C-8 and returned HTTP 200 with usable response types. Seven device/app/hub properties were observed successfully on a virtual/LAN device. `controllerType` remained unavailable on that device and should be checked on a native Zigbee or Z-Wave device.
+On 22 August 2026, the original 17 endpoint paths were exercised twice on a Hubitat C-8 and returned HTTP 200 with usable response types. Seven device/app/hub properties were observed successfully on a virtual/LAN device. `controllerType` remained unavailable on that device and should be checked on a native Zigbee or Z-Wave device.
+
+The 11 candidate paths listed above were added after a broader community and public-source review.
+They have not yet been run on the C-8 and must not be described as verified until that test is
+complete.
 
 The endpoint tester validates raw paths independently. The reusable library wrapper has been syntax-checked but has not yet been fully exercised through `#include` in a live consumer. Treat this as a pre-release utility until that integration test is complete.
 
@@ -184,3 +235,4 @@ The tester records only endpoint name, HTTP status, general response type, and s
 - The tester serializes async requests and supports only one run at a time.
 - `controllerType` has not been confirmed on a native radio device.
 - The library wrapper still requires live `#include` integration testing.
+- The 11 candidate endpoints have not yet been verified on the C-8.
