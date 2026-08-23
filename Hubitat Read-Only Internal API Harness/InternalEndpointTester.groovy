@@ -250,16 +250,16 @@ List buildEndpointList() {
             expected: "Any"
         ],
         [
-            name: "Free OS memory history (candidate)",
+            name: "Free OS memory history",
             path: "/hub/advanced/freeOSMemoryHistory",
             expected: "Any",
-            candidate: true
+            optional: true
         ],
         [
-            name: "Latest free OS memory (candidate)",
+            name: "Latest free OS memory",
             path: "/hub/advanced/freeOSMemoryLast",
             expected: "Any",
-            candidate: true
+            optional: true
         ],
         [
             name: "Database size",
@@ -272,34 +272,34 @@ List buildEndpointList() {
             expected: "Any"
         ],
         [
-            name: "Z-Wave details (candidate)",
+            name: "Z-Wave details",
             path: "/hub/zwaveDetails/json",
             expected: "ListOrMap",
-            candidate: true
+            optional: true
         ],
         [
-            name: "Zigbee details (candidate)",
+            name: "Zigbee details",
             path: "/hub/zigbeeDetails/json",
             expected: "ListOrMap",
-            candidate: true
+            optional: true
         ],
         [
-            name: "Matter details (candidate)",
+            name: "Matter details",
             path: "/hub/matterDetails/json",
             expected: "ListOrMap",
-            candidate: true
+            optional: true
         ],
         [
-            name: "Zigbee child and route information (candidate)",
+            name: "Zigbee child and route information",
             path: "/hub/zigbee/getChildAndRouteInfo",
             expected: "String",
-            candidate: true
+            optional: true
         ],
         [
-            name: "Zigbee child and route JSON (candidate)",
+            name: "Zigbee child and route JSON",
             path: "/hub/zigbee/getChildAndRouteInfoJson",
             expected: "ListOrMap",
-            candidate: true
+            optional: true
         ],
         [
             name: "Device list",
@@ -332,10 +332,10 @@ List buildEndpointList() {
             expected: "ListOrMap"
         ],
         [
-            name: "User driver types (candidate)",
+            name: "User driver types",
             path: "/hub2/userDeviceTypes",
             expected: "ListOrMap",
-            candidate: true
+            optional: true
         ],
         [
             name: "Rooms",
@@ -343,22 +343,22 @@ List buildEndpointList() {
             expected: "ListOrMap"
         ],
         [
-            name: "Hub data (candidate)",
+            name: "Hub data",
             path: "/hub2/hubData",
             expected: "Map",
-            candidate: true
+            optional: true
         ],
         [
-            name: "Hub Mesh data (candidate)",
+            name: "Hub Mesh data",
             path: "/hub2/hubMeshJson",
             expected: "ListOrMap",
-            candidate: true
+            optional: true
         ],
         [
-            name: "Network configuration (candidate, sensitive)",
+            name: "Network configuration (sensitive)",
             path: "/hub2/networkConfiguration",
             expected: "Map",
-            candidate: true
+            optional: true
         ]
     ]
 
@@ -436,7 +436,7 @@ void runNextEndpointTest() {
         name: endpoint.name,
         path: endpoint.path,
         expected: endpoint.expected,
-        candidate: endpoint.candidate == true
+        optional: endpoint.optional == true
     ]
 
     Map requestParameters = [
@@ -464,8 +464,8 @@ void endpointTestCallback(response, Map callbackData) {
     String name = callbackData.name ?: "Unknown endpoint"
     String path = callbackData.path ?: ""
     String expected = callbackData.expected ?: "Any"
-    Boolean candidate = callbackData.candidate == true
-    String unavailableLevel = candidate ? "CHECK" : "FAIL"
+    Boolean optional = callbackData.optional == true
+    String unavailableLevel = optional ? "CHECK" : "FAIL"
 
     try {
         if (response == null) {

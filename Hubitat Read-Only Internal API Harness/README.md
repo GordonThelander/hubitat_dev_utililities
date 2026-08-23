@@ -115,8 +115,15 @@ The probe distinguishes usable installed-app JSON from an unavailable endpoint o
 | `epHubDetails()` | `/hub/details/json` | 1 | Hub identity, platform, hardware and location metadata |
 | `epHubCpuInfo()` | `/hub/cpuInfo` | 1 | Processor count and load information |
 | `epHubFreeMemory()` | `/hub/advanced/freeOSMemory` | 1 | Free OS memory |
+| `epHubFreeMemoryHistory()` | `/hub/advanced/freeOSMemoryHistory` | 1 | Historical free-memory data, commonly text or CSV |
+| `epHubFreeMemoryLast()` | `/hub/advanced/freeOSMemoryLast` | 2 | Latest free-memory value |
 | `epHubDatabaseSize()` | `/hub/advanced/databaseSize` | 1 | Database size |
 | `epHubInternalTemp()` | `/hub/advanced/internalTempCelsius` | 1 | Internal temperature |
+| `epHubZwaveDetails()` | `/hub/zwaveDetails/json` | 2 | Z-Wave inventory and radio details |
+| `epHubZigbeeDetails()` | `/hub/zigbeeDetails/json` | 2 | Zigbee inventory and radio details |
+| `epHubMatterDetails()` | `/hub/matterDetails/json` | 2 | Matter inventory and fabric status |
+| `epHubZigbeeChildRoute()` | `/hub/zigbee/getChildAndRouteInfo` | 2 | Zigbee child and route information as text |
+| `epHubZigbeeChildRouteJson()` | `/hub/zigbee/getChildAndRouteInfoJson` | 2 | Zigbee child and route information as JSON |
 | `epDeviceFullJson(id)` | `/device/fullJson/{id}` | 1 | Device details, state, commands, scheduling and application usage |
 | `epDeviceListData()` | `/device/list/data` | 1 | Device inventory |
 | `epDeviceDrivers()` | `/device/drivers` | 2 | Driver definitions |
@@ -125,7 +132,11 @@ The probe distinguishes usable installed-app JSON from an unavailable endpoint o
 | `epHub2DevicesList()` | `/hub2/devicesList` | 1 | Hierarchical device inventory, rooms, protocols and tags |
 | `epHub2AppsList()` | `/hub2/appsList` | 1 | Complete installed-application hierarchy |
 | `epHub2UserAppTypes()` | `/hub2/userAppTypes` | 2 | User App Code definitions |
+| `epHub2UserDeviceTypes()` | `/hub2/userDeviceTypes` | 1 | User driver-code definitions |
 | `epHub2RoomsList()` | `/hub2/roomsList` | 1 | Rooms, devices and state summaries |
+| `epHub2HubData()` | `/hub2/hubData` | 1 | Hub identity, platform and radio information |
+| `epHub2HubMesh()` | `/hub2/hubMeshJson` | 2 | Hub Mesh peers and linkage data |
+| `epHub2NetworkConfiguration()` | `/hub2/networkConfiguration` | 2 | Sensitive IP, gateway and DNS configuration |
 | `epAppCode(id)` | `/app/ajax/code?id={id}` | 2 | User App Code source |
 | `epDriverCode(id)` | `/driver/ajax/code?id={id}` | 2 | User driver source |
 | `epLibraryCode(id)` | `/library/ajax/code?id={id}` | 2 | User library source |
@@ -135,11 +146,15 @@ Tier definitions:
 - **Tier 1:** undocumented read-only endpoint with established ecosystem usage.
 - **Tier 2:** undocumented, read-only administration-interface implementation endpoint with greater response-shape risk.
 
-## Candidate endpoints awaiting live verification
+## Additional endpoints verified on the C-8
 
-The standalone tester now probes the following additional endpoints. They are not yet exposed by
-`HubitatInternalApiLib.groovy`. A missing endpoint, unsupported radio, or unexpected response is
-reported as **CHECK** rather than **FAIL** until the path has been verified on representative hubs.
+The broader community and public-source review identified the following additional endpoints. On
+23 August 2026, all 11 returned HTTP 200 with the expected response type on the test C-8. They are
+now exposed by `HubitatInternalApiLib.groovy`.
+
+The tester continues to mark them as optional because undocumented endpoint availability can vary
+by firmware, hub model and installed radio support. An unavailable optional endpoint is reported as
+**CHECK**, not **FAIL**.
 
 | Path | Expected content | Evidence and caution |
 |---|---|---|
@@ -205,11 +220,13 @@ Each device/app helper fails defensively and returns `null` when the property is
 
 ## Verification status
 
-On 22 August 2026, the original 17 endpoint paths were exercised twice on a Hubitat C-8 and returned HTTP 200 with usable response types. Seven device/app/hub properties were observed successfully on a virtual/LAN device. `controllerType` remained unavailable on that device and should be checked on a native Zigbee or Z-Wave device.
+On 22 August 2026, the original 17 endpoint paths were exercised twice on a Hubitat C-8 and returned HTTP 200 with usable response types.
 
-The 11 candidate paths listed above were added after a broader community and public-source review.
-They have not yet been run on the C-8 and must not be described as verified until that test is
-complete.
+On 23 August 2026, the expanded 28-path run returned HTTP 200 with the expected response type for
+every original and newly added endpoint, including all five optional ID-specific tests. Hub uptime,
+application installation state, disabled status, device data, type name, driver type, last activity
+and device status were also observed successfully. `controllerType` remained unavailable on the
+selected CoCoHue LAN device and still needs to be checked on a native Zigbee or Z-Wave device.
 
 The endpoint tester validates raw paths independently. The reusable library wrapper has been syntax-checked but has not yet been fully exercised through `#include` in a live consumer. Treat this as a pre-release utility until that integration test is complete.
 
@@ -235,4 +252,4 @@ The tester records only endpoint name, HTTP status, general response type, and s
 - The tester serializes async requests and supports only one run at a time.
 - `controllerType` has not been confirmed on a native radio device.
 - The library wrapper still requires live `#include` integration testing.
-- The 11 candidate endpoints have not yet been verified on the C-8.
+- The 11 additional endpoints have been verified only on the test C-8 and remain capability-tested optional paths.
