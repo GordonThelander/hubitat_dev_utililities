@@ -225,8 +225,9 @@ On 22 August 2026, the original 17 endpoint paths were exercised twice on a Hubi
 On 23 August 2026, the expanded 28-path run returned HTTP 200 with the expected response type for
 every original and newly added endpoint, including all five optional ID-specific tests. Hub uptime,
 application installation state, disabled status, device data, type name, driver type, last activity
-and device status were also observed successfully. `controllerType` remained unavailable on the
-selected CoCoHue LAN device and still needs to be checked on a native Zigbee or Z-Wave device.
+and device status were also observed successfully. `controllerType` was unavailable on a CoCoHue
+LAN device, as expected, and was subsequently confirmed as `ZGB` on a native Zigbee SmartThings
+Multipurpose Sensor V5.
 
 The endpoint tester validates raw paths independently. The reusable library wrapper has been syntax-checked but has not yet been fully exercised through `#include` in a live consumer. Treat this as a pre-release utility until that integration test is complete.
 
@@ -250,6 +251,5 @@ The tester records only endpoint name, HTTP status, general response type, and s
 - Read-only responses can contain credentials and private source code.
 - Login security or future firmware may block loopback access.
 - The tester serializes async requests and supports only one run at a time.
-- `controllerType` has not been confirmed on a native radio device.
 - The library wrapper still requires live `#include` integration testing.
 - The 11 additional endpoints have been verified only on the test C-8 and remain capability-tested optional paths.
