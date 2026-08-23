@@ -222,7 +222,7 @@ Hubitat also exposes undocumented internal endpoints used by its administration 
 The sibling utility in this repository provides a guarded endpoint builder and probe:
 
 ```groovy
-#include gordonthelander.HubitatInternalApiLib
+#include yournamespace.HubitatInternalApiLib
 
 Map result = hiaFetch(epDeviceFullJson(deviceId))
 
@@ -230,6 +230,10 @@ if (result.ok) {
     Map deviceData = result.data as Map
 }
 ```
+
+Replace `yournamespace` with the namespace declared by the installed copy of
+`HubitatInternalApiLib.groovy`. Hubitat requires the `#include` namespace and
+library name to match the library definition exactly.
 
 See [`../Hubitat Read-Only Internal API Harness/README.md`](../Hubitat%20Read-Only%20Internal%20API%20Harness/README.md).
 
@@ -640,4 +644,3 @@ Every implementation must:
 - [Hubitat discussion confirming that arbitrary apps cannot directly read driver preferences](https://community.hubitat.com/t/get-device-setting-from-an-app/38553)
 - [Hubitat Automation Map](https://github.com/GordonThelander/hubitat-automation-map)
 - [Hubitat Read-Only Internal API Harness](../Hubitat%20Read-Only%20Internal%20API%20Harness/README.md)
-
