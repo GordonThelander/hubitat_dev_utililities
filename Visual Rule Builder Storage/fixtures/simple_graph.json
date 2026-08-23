@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "nodes": [
+    { "kind": "trigger", "id": "door-trigger", "type": "contact", "config": { "contactSensors": [101], "contactSensorEvent": "Contact opens" } },
+    { "kind": "trigger", "id": "motion-trigger", "type": "motion", "config": { "motionSensors": [102], "motionSensorEvent": "Motion starts" } },
+    { "kind": "merge", "id": "trigger-merge", "type": "triggerMerge", "config": {} },
+    { "kind": "decision", "id": "decision", "type": "all", "config": { "conditions": [
+      { "id": "low-light", "type": "illuminanceCondition", "config": { "illuminanceSensorState": "Illuminance is below...", "illuminance": 50, "illuminanceSensors": [102] } }
+    ] } },
+    { "kind": "action", "id": "turn-on", "type": "turnOn", "config": { "switches": [201, 202, 203] } }
+  ],
+  "edges": [
+    { "from": "door-trigger", "to": "trigger-merge", "port": "next" },
+    { "from": "motion-trigger", "to": "trigger-merge", "port": "next" },
+    { "from": "trigger-merge", "to": "decision", "port": "next" },
+    { "from": "decision", "to": "turn-on", "port": "true" }
+  ]
+}
+

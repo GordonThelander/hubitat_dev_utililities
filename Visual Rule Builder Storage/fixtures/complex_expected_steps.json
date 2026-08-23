@@ -1,0 +1,14 @@
+[
+  { "kind": "trigger", "label": "Contact opens", "devices": ["Workshop Door Sensor"] },
+  { "kind": "trigger", "label": "Motion starts", "devices": ["Workshop Motion Sensor"] },
+  { "kind": "action", "ctrl": "if", "cond": "Illuminance is below... on Workshop Motion Sensor", "label": "", "devices": ["Workshop Motion Sensor"] },
+  { "kind": "action", "label": "On", "devices": ["Workshop Main Light", "Workshop Bench Light", "Workshop Indicator"], "ruleTargets": [] },
+  { "kind": "action", "label": "Run Rule Actions", "devices": [], "ruleTargets": ["401"] },
+  { "kind": "action", "label": "Wait 5m", "devices": [], "ruleTargets": [] },
+  { "kind": "action", "label": "Off", "devices": ["Workshop Main Light", "Workshop Bench Light", "Workshop Indicator"], "ruleTargets": [] },
+  { "kind": "action", "ctrl": "else", "cond": "", "label": "", "devices": [] },
+  { "kind": "action", "label": "Notify: Activity detected while the light condition is false.", "devices": ["Household Notification Device"], "ruleTargets": [] },
+  { "kind": "action", "ctrl": "endif", "cond": "", "label": "", "devices": [] },
+  { "kind": "action", "label": "Run Rule Actions", "devices": [], "ruleTargets": ["402"] }
+]
+
