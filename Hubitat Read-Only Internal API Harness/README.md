@@ -37,6 +37,12 @@ These helpers are a safety net, not a complete allow-list.
 |---|---|
 | `HubitatInternalApiLib.groovy` | `#include`-able read-only endpoint library |
 | `InternalEndpointTester.groovy` | Standalone app that checks endpoint availability and general response type without storing response bodies |
+| `HubVariableEndpointTester.groovy` | Probes candidate loopback endpoints for a Hub Variable inventory - see Hub Variable inventory findings below |
+| `HubVariableInProcessApiTester.groovy` | Confirms the in-process `getAllGlobalVars()`/`getGlobalVar()` API from an ordinary installed app - see Hub Variable inventory findings below |
+
+Both Hub Variable testers follow `InternalEndpointTester.groovy`'s own install/run/remove
+discipline (below) and its never-log-values rule: they report counts, declared types, and
+Connector-device presence only, never a variable's name or value.
 
 ## Installing the library
 
@@ -175,6 +181,95 @@ Installing or running the tester changes a hub and should be done only with auth
 7. Remove the temporary installed app and Apps Code entry when testing is complete.
 
 The tester records only endpoint name, HTTP status, general response type, and sanitized error text. It does not retain response bodies.
+
+## Hub Variable inventory findings
+
+Investigated whether an ordinary installed Hubitat app can obtain an authoritative Hub Variable
+inventory, for Automation Map's v2.0.14 first-class Hub Variable support
+(`GordonThelander/hubitat-automation-map`, `Supporting Docs/hub_variable_first_class_spec.md`).
+All results below were exercised live on a Hubitat C-8 on 26 August 2026.
+
+### HTTP endpoint search: negative
+
+`HubVariableEndpointTester.groovy` probed seven candidate loopback paths, matching the naming
+convention of endpoints already confirmed elsewhere in this harness (`/hub2/devicesList`,
+`/hub2/appsList`, `/hub2/roomsList`):
+
+| Path | Result |
+|---|---|
+| `/hub2/variablesList` | 404 |
+| `/hub2/hubVariablesList` | 404 |
+| `/hub/variables/list/data` | 404 |
+| `/hub/variables/list` | 404 |
+| `/hub/variables/json` | 404 |
+| `/hub/variables` | 404 |
+| `/hub2/variableList` | 404 |
+
+None of the seven exist. This result is specific to the loopback-HTTP discovery path only - it
+does not prove no in-process mechanism exists (see below).
+
+### In-process SmartApp API: positive
+
+`HubVariableInProcessApiTester.groovy` confirmed two documented in-process methods, called
+directly with no HTTP request, from an ordinary installed app:
+
+- `getAllGlobalVars()` - returns every Hub Variable on the hub, keyed by name, including variables
+  with no Connector device. Confirmed against variables of all five canonical types (String,
+  Number, Decimal, Boolean, DateTime).
+- `getGlobalVar(name)` - single-variable lookup, called bare (in app scope, not
+  `location.getGlobalVar()` - a 2024 community report found the latter does not work:
+  <https://community.hubitat.com/t/getglobalvar-not-found-on-location/139358>).
+
+Each `getAllGlobalVars()` entry has this shape:
+
+```text
+[type: <platform runtime type spelling - see table below>,
+ value: <current value>,
+ deviceId: <Connector device ID, or null>,
+ attribute: <Connector attribute, or null>,
+ source: "hub",
+ sourceIp: <string, not yet characterised>]
+```
+
+**`type` is the platform's Groovy runtime type name, not the UI's declared-type label** -
+confirmed by creating one variable of each canonical type and reading it back:
+
+| UI declared type | `type` field value |
+|---|---|
+| String | `string` |
+| Number | `integer` |
+| Decimal | `bigdecimal` |
+| Boolean | `boolean` |
+| DateTime | `datetime` |
+
+A consumer that maps only `number`/`decimal` (the UI's own labels) will silently fail to recognise
+Number/Decimal variables - this was a real, live bug in Automation Map's own first implementation
+attempt, caught by exporting real test data before this table existed to prevent it.
+
+### Connector devices are absent from `/hub2/devicesList`
+
+A Hub Variable's Connector - the virtual device Hubitat creates and keeps synchronized with the
+variable's value - does not appear in `/hub2/devicesList`, the bulk device-enumeration endpoint
+this harness and Automation Map otherwise both treat as authoritative for "every device on the
+hub." Confirmed with a temporary diagnostic log against three real Connectors (String, Boolean,
+and Number-typed, one via a non-default `connectorType`): the endpoint's returned device count did
+not move across three consecutive fetches while all three Connectors were independently confirmed
+to exist via `getGlobalVar(name).deviceId`.
+
+A consumer needing a Connector's device details (label, room, capabilities) cannot rely on
+`/hub2/devicesList` alone and must either accept a degraded/synthesized record for it, or find a
+different discovery path - not yet investigated here; `/device/fullJson/{id}` against the known
+deviceId is the next candidate worth trying.
+
+### Creating a Connector via automation requires the native page opened once
+
+Programmatic Connector creation (via a separate community MCP server,
+`kingpanther13/Hubitat-local-MCP-server`) failed identically four times with a
+wizard-completed-but-no-deviceId symptom, then succeeded immediately after the hub owner opened
+Settings -> Hub Variables in a real browser once. Consistent with some Hubitat native apps not
+fully initializing internal dynamicPage state until a human loads them at least once. Not
+confirmed against other native apps; noted here as a pattern worth checking if a similar
+automation-wizard symptom appears elsewhere in this harness's future work.
 
 ## Known limitations
 
