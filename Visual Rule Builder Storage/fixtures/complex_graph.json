@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "nodes": [
+    { "kind": "trigger", "id": "door-trigger", "type": "contact", "config": { "contactSensors": [101], "contactSensorEvent": "Contact opens" } },
+    { "kind": "trigger", "id": "motion-trigger", "type": "motion", "config": { "motionSensors": [102], "motionSensorEvent": "Motion starts" } },
+    { "kind": "merge", "id": "trigger-merge", "type": "triggerMerge", "config": {} },
+    { "kind": "decision", "id": "decision", "type": "all", "config": { "conditions": [
+      { "id": "low-light", "type": "illuminanceCondition", "config": { "illuminanceSensorState": "Illuminance is below...", "illuminance": 50, "illuminanceSensors": [102] } }
+    ] } },
+    { "kind": "action", "id": "then-on", "type": "turnOn", "config": { "switches": [201, 202, 203] } },
+    { "kind": "action", "id": "then-run", "type": "runRule", "config": { "appId": 401 } },
+    { "kind": "action", "id": "then-wait", "type": "wait", "config": { "minutes": 5, "seconds": 0 } },
+    { "kind": "action", "id": "then-off", "type": "turnOff", "config": { "switches": [201, 202, 203] } },
+    { "kind": "action", "id": "else-notify", "type": "sendNotification", "config": { "notificationDevices": [301], "notificationMessage": "Activity detected while the light condition is false." } },
+    { "kind": "merge", "id": "branch-merge", "type": "branchMerge", "config": {} },
+    { "kind": "action", "id": "follow-up", "type": "runRule", "config": { "appId": 402 } }
+  ],
+  "edges": [
+    { "from": "door-trigger", "to": "trigger-merge", "port": "next" },
+    { "from": "motion-trigger", "to": "trigger-merge", "port": "next" },
+    { "from": "trigger-merge", "to": "decision", "port": "next" },
+    { "from": "decision", "to": "then-on", "port": "true" },
+    { "from": "then-on", "to": "then-run", "port": "next" },
+    { "from": "then-run", "to": "then-wait", "port": "next" },
+    { "from": "then-wait", "to": "then-off", "port": "next" },
+    { "from": "then-off", "to": "branch-merge", "port": "next" },
+    { "from": "decision", "to": "else-notify", "port": "false" },
+    { "from": "else-notify", "to": "branch-merge", "port": "next" },
+    { "from": "branch-merge", "to": "follow-up", "port": "next" }
+  ]
+}
+

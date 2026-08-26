@@ -1,0 +1,15 @@
+{
+  "devices": {
+    "101": "Workshop Door Sensor",
+    "102": "Workshop Motion Sensor",
+    "201": "Workshop Main Light",
+    "202": "Workshop Bench Light",
+    "203": "Workshop Indicator",
+    "301": "Household Notification Device"
+  },
+  "apps": {
+    "401": "Synthetic Target Rule",
+    "402": "Synthetic Follow-up Rule"
+  }
+}
+

@@ -46,8 +46,15 @@ import groovy.transform.Field
     hubDetails       : 1,
     hubCpuInfo       : 1,
     hubFreeMemory    : 1,
+    hubFreeMemoryHistory: 1,
+    hubFreeMemoryLast: 2,
     hubDatabaseSize  : 1,
     hubInternalTemp  : 1,
+    hubZwaveDetails  : 2,
+    hubZigbeeDetails : 2,
+    hubMatterDetails : 2,
+    hubZigbeeChildRoute: 2,
+    hubZigbeeChildRouteJson: 2,
     deviceFullJson   : 1,
     deviceListData   : 1,
     deviceDrivers    : 2,
@@ -56,7 +63,11 @@ import groovy.transform.Field
     hub2DevicesList  : 1,
     hub2AppsList     : 1,
     hub2UserAppTypes : 2,
+    hub2UserDeviceTypes: 1,
     hub2RoomsList    : 1,
+    hub2HubData      : 1,
+    hub2HubMesh      : 2,
+    hub2NetworkConfiguration: 2,
     appCode          : 2,
     driverCode       : 2,
     libraryCode      : 2,
@@ -71,8 +82,15 @@ import groovy.transform.Field
 String epHubDetails() { '/hub/details/json' }
 String epHubCpuInfo() { '/hub/cpuInfo' }
 String epHubFreeMemory() { '/hub/advanced/freeOSMemory' }
+String epHubFreeMemoryHistory() { '/hub/advanced/freeOSMemoryHistory' }
+String epHubFreeMemoryLast() { '/hub/advanced/freeOSMemoryLast' }
 String epHubDatabaseSize() { '/hub/advanced/databaseSize' }
 String epHubInternalTemp() { '/hub/advanced/internalTempCelsius' }
+String epHubZwaveDetails() { '/hub/zwaveDetails/json' }
+String epHubZigbeeDetails() { '/hub/zigbeeDetails/json' }
+String epHubMatterDetails() { '/hub/matterDetails/json' }
+String epHubZigbeeChildRoute() { '/hub/zigbee/getChildAndRouteInfo' }
+String epHubZigbeeChildRouteJson() { '/hub/zigbee/getChildAndRouteInfoJson' }
 
 String epDeviceFullJson(String deviceId) { "/device/fullJson/${deviceId}" }
 String epDeviceListData() { '/device/list/data' }
@@ -84,7 +102,11 @@ String epInstalledAppStatus(String appId) { "/installedapp/statusJson/${appId}" 
 String epHub2DevicesList() { '/hub2/devicesList' }
 String epHub2AppsList() { '/hub2/appsList' }
 String epHub2UserAppTypes() { '/hub2/userAppTypes' }
+String epHub2UserDeviceTypes() { '/hub2/userDeviceTypes' }
 String epHub2RoomsList() { '/hub2/roomsList' }
+String epHub2HubData() { '/hub2/hubData' }
+String epHub2HubMesh() { '/hub2/hubMeshJson' }
+String epHub2NetworkConfiguration() { '/hub2/networkConfiguration' }
 
 String epAppCode(String appCodeId) { "/app/ajax/code?id=${appCodeId}" }
 String epDriverCode(String driverCodeId) { "/driver/ajax/code?id=${driverCodeId}" }

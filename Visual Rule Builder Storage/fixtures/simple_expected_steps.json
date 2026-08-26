@@ -1,0 +1,8 @@
+[
+  { "kind": "trigger", "label": "Contact opens", "devices": ["Workshop Door Sensor"] },
+  { "kind": "trigger", "label": "Motion starts", "devices": ["Workshop Motion Sensor"] },
+  { "kind": "action", "ctrl": "if", "cond": "Illuminance is below... on Workshop Motion Sensor", "label": "", "devices": ["Workshop Motion Sensor"] },
+  { "kind": "action", "label": "On", "devices": ["Workshop Main Light", "Workshop Bench Light", "Workshop Indicator"], "ruleTargets": [] },
+  { "kind": "action", "ctrl": "endif", "cond": "", "label": "", "devices": [] }
+]
+

@@ -160,19 +160,19 @@ void testInProcessProperties() {
     Long uptime = readHubUptime()
     appendResult(
         uptime != null
-            ? "PASS: Hub uptime (in-process) — ${uptime}"
-            : "CHECK: Hub uptime (in-process) — property not available on this firmware"
+            ? "PASS: Hub uptime (in-process) - ${uptime}"
+            : "CHECK: Hub uptime (in-process) - property not available on this firmware"
     )
 
     String installState = readAppInstallationState(app)
     appendResult(
         installState != null
-            ? "PASS: App installation state (in-process) — ${installState}"
-            : "CHECK: App installation state (in-process) — property not available"
+            ? "PASS: App installation state (in-process) - ${installState}"
+            : "CHECK: App installation state (in-process) - property not available"
     )
 
     if (deviceToTest == null) {
-        appendResult("CHECK: Device-scoped in-process properties skipped — no device selected")
+        appendResult("CHECK: Device-scoped in-process properties skipped - no device selected")
         return
     }
 
@@ -190,8 +190,8 @@ void testInProcessProperties() {
         Object value = reader.call()
         appendResult(
             value != null
-                ? "PASS: ${label} (in-process) — ${value}"
-                : "CHECK: ${label} (in-process) — property not available"
+                ? "PASS: ${label} (in-process) - ${value}"
+                : "CHECK: ${label} (in-process) - property not available"
         )
     }
 }
@@ -250,6 +250,18 @@ List buildEndpointList() {
             expected: "Any"
         ],
         [
+            name: "Free OS memory history",
+            path: "/hub/advanced/freeOSMemoryHistory",
+            expected: "Any",
+            optional: true
+        ],
+        [
+            name: "Latest free OS memory",
+            path: "/hub/advanced/freeOSMemoryLast",
+            expected: "Any",
+            optional: true
+        ],
+        [
             name: "Database size",
             path: "/hub/advanced/databaseSize",
             expected: "Any"
@@ -258,6 +270,36 @@ List buildEndpointList() {
             name: "Internal temperature",
             path: "/hub/advanced/internalTempCelsius",
             expected: "Any"
+        ],
+        [
+            name: "Z-Wave details",
+            path: "/hub/zwaveDetails/json",
+            expected: "ListOrMap",
+            optional: true
+        ],
+        [
+            name: "Zigbee details",
+            path: "/hub/zigbeeDetails/json",
+            expected: "ListOrMap",
+            optional: true
+        ],
+        [
+            name: "Matter details",
+            path: "/hub/matterDetails/json",
+            expected: "ListOrMap",
+            optional: true
+        ],
+        [
+            name: "Zigbee child and route information",
+            path: "/hub/zigbee/getChildAndRouteInfo",
+            expected: "String",
+            optional: true
+        ],
+        [
+            name: "Zigbee child and route JSON",
+            path: "/hub/zigbee/getChildAndRouteInfoJson",
+            expected: "ListOrMap",
+            optional: true
         ],
         [
             name: "Device list",
@@ -290,9 +332,33 @@ List buildEndpointList() {
             expected: "ListOrMap"
         ],
         [
+            name: "User driver types",
+            path: "/hub2/userDeviceTypes",
+            expected: "ListOrMap",
+            optional: true
+        ],
+        [
             name: "Rooms",
             path: "/hub2/roomsList",
             expected: "ListOrMap"
+        ],
+        [
+            name: "Hub data",
+            path: "/hub2/hubData",
+            expected: "Map",
+            optional: true
+        ],
+        [
+            name: "Hub Mesh data",
+            path: "/hub2/hubMeshJson",
+            expected: "ListOrMap",
+            optional: true
+        ],
+        [
+            name: "Network configuration (sensitive)",
+            path: "/hub2/networkConfiguration",
+            expected: "Map",
+            optional: true
         ]
     ]
 
@@ -369,7 +435,8 @@ void runNextEndpointTest() {
     Map callbackData = [
         name: endpoint.name,
         path: endpoint.path,
-        expected: endpoint.expected
+        expected: endpoint.expected,
+        optional: endpoint.optional == true
     ]
 
     Map requestParameters = [
@@ -385,7 +452,7 @@ void runNextEndpointTest() {
         )
     } catch (Exception exception) {
         appendResult(
-            "FAIL: ${endpoint.name} — request could not be started: " +
+            "FAIL: ${endpoint.name} - request could not be started: " +
             safeMessage(exception.message)
         )
 
@@ -397,15 +464,17 @@ void endpointTestCallback(response, Map callbackData) {
     String name = callbackData.name ?: "Unknown endpoint"
     String path = callbackData.path ?: ""
     String expected = callbackData.expected ?: "Any"
+    Boolean optional = callbackData.optional == true
+    String unavailableLevel = optional ? "CHECK" : "FAIL"
 
     try {
         if (response == null) {
             appendResult(
-                "FAIL: ${name} — no HTTP response"
+                "${unavailableLevel}: ${name} - no HTTP response"
             )
         } else if (response.hasError()) {
             appendResult(
-                "FAIL: ${name} — ${safeMessage(response.getErrorMessage())}"
+                "${unavailableLevel}: ${name} - ${safeMessage(response.getErrorMessage())}"
             )
         } else {
             Integer status = response.status as Integer
@@ -414,30 +483,30 @@ void endpointTestCallback(response, Map callbackData) {
 
             if (status != 200) {
                 appendResult(
-                    "FAIL: ${name} — HTTP ${status}"
+                    "${unavailableLevel}: ${name} - HTTP ${status}"
                 )
             } else if (responseData == null) {
                 appendResult(
-                    "CHECK: ${name} — HTTP 200 but response body was null"
+                    "CHECK: ${name} - HTTP 200 but response body was null"
                 )
             } else if (!matchesExpectedType(responseData, expected)) {
                 appendResult(
-                    "CHECK: ${name} — HTTP 200, returned ${responseType}; " +
+                    "CHECK: ${name} - HTTP 200, returned ${responseType}; " +
                     "expected ${expected}. It may be a login page or its schema may have changed."
                 )
             } else if (isProbablyLoginPage(responseData)) {
                 appendResult(
-                    "CHECK: ${name} — HTTP 200 but response appears to be an HTML login page"
+                    "CHECK: ${name} - HTTP 200 but response appears to be an HTML login page"
                 )
             } else {
                 appendResult(
-                    "PASS: ${name} — HTTP 200, ${responseType}"
+                    "PASS: ${name} - HTTP 200, ${responseType}"
                 )
             }
         }
     } catch (Exception exception) {
         appendResult(
-            "FAIL: ${name} — callback error: " +
+            "FAIL: ${name} - callback error: " +
             safeMessage(exception.message)
         )
     }
