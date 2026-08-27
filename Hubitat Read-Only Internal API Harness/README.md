@@ -189,7 +189,7 @@ until their behavior is separately established.
 
 | Endpoint or family | Warning |
 |---|---|
-| `/hub/cloud/checkForUpdate` | May initiate a cloud firmware check rather than only return cached status |
+| `/hub/cloud/checkForUpdate` | Confirmed 27 August 2026 (see Platform update check findings below): live-checks Hubitat's cloud and is bundled with `/hub/cloud/updatePlatform` behind one apply action - genuinely mutating, not merely a stronger read |
 | `/hub/zigbeeChannelScanJson` | May initiate or depend on active Zigbee channel scanning |
 | `/app/edit/update` and equivalent App Code save paths | Mutates installed source code |
 | `/hub/advanced/deleteScheduledJob?id=...` | Deletes scheduled work |
@@ -339,6 +339,42 @@ Settings -> Hub Variables in a real browser once. Consistent with some Hubitat n
 fully initializing internal dynamicPage state until a human loads them at least once. Not
 confirmed against other native apps; noted here as a pattern worth checking if a similar
 automation-wizard symptom appears elsewhere in this harness's future work.
+
+## Platform update check findings
+
+Investigated for Automation Map's backlog item "Live Hubitat platform update check"
+(`GordonThelander/hubitat-automation-map`, `BACKLOG.md` item 10). Confirms the research lead this
+harness already flagged above.
+
+### `/hub/cloud/checkForUpdate` is live, not cached - and not read-only in practice
+
+Exercised on 27 August 2026, not through this harness but through a separate MCP server with hub
+admin access (`hubitat-rules`), which documents `hub_update_firmware` as wrapping
+`/hub/cloud/checkForUpdate` + `/hub/cloud/updatePlatform`. A status call reported `UPDATE_AVAILABLE`
+(2.5.1.172 -> 2.5.1.174) with version, release-notes URL and beta flag; the apply call immediately
+triggered the real install (download, apply, reboot). The two are bundled behind one action - there
+is no way to ask "is one available" through this path without also committing to install if the
+answer is yes. This confirms the original caution above and adds a concrete detail: it is not simply
+a stronger read, it is a genuine mutation endpoint, correctly out of scope for a read-only harness
+regardless of firmware version.
+
+The existing in-process `hiaFirmwareVersion()` read (current version only) is unaffected by any of
+this - only the check-for-a-newer-version half is the problem.
+
+### Safer alternative found: `HPM_Manifest_Crawl`'s own dataset
+
+`HPM_Manifest_Crawl`'s feature-tracker dataset
+(`site/feature-tracker/data/hubitat_release_features.json`, public, confirmed live) tracks every
+Hubitat release with `version` and `releasedAt`. Comparing its latest entry against
+`location.hub.firmwareVersionString` needs no undocumented endpoint and no admin access - ordinary
+sandboxed-app code can do the whole comparison. The tradeoff: this is a scheduled community-forum
+crawl, not a live Hubitat query, so it lags real releases by up to one crawl cycle. Confirmed
+directly - at the moment 2.5.1.174 was installing above, the dataset's last harvest (26 August 2026)
+still only knew about 2.5.1.172.
+
+This is now the recommended direction for Automation Map's own update-check feature; see that
+repo's `BACKLOG.md` item 10 for the concrete next action (a small derived `latest.json` rather than
+shipping the ~4 MB dataset to a Hubitat app).
 
 ## Known limitations
 
