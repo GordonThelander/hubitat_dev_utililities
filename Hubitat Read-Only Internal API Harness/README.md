@@ -209,10 +209,20 @@ not from a live call made by this harness. That app makes an in-process loopback
 - `POST /hub/restart` restarts the Hubitat platform process;
 - `POST /hub/reboot` reboots the complete hub.
 
-When Hub Login Security is enabled, the app first sends the configured administrative username
-and password to `POST /login`, captures the returned `Set-Cookie` session value, and supplies that
-cookie with the restart or reboot request. Without Hub Login Security it sends the administrative
-request directly.
+The original 2020 app handles Hub Login Security by first sending the configured administrative
+username and password to `POST /login`, capturing the returned `Set-Cookie` session value, and
+supplying that cookie with the restart or reboot request. Without Hub Login Security it sends the
+administrative request directly.
+
+A later Hubitat Community report from Jean P. May Jr. (`thebearmay`) on 6 February 2025 states that,
+as of several platform releases earlier, a request made through the loopback address no longer
+requires login even when Hub Login Security is enabled:
+[`Hub Auto Rebooter Max` discussion](https://community.hubitat.com/t/re-release-hub-auto-rebooter-max/149813/2).
+This harness has not exercised either destructive endpoint, with or without Hub Login Security, so
+the newer behavior remains community evidence rather than a verification result. A future guarded
+administrative utility should attempt the credential-free loopback request first and should not
+collect or store administrator credentials unless a capability test proves they are required on
+that particular hub and firmware.
 
 The source defaults to process restart because it is faster and less disruptive, and recommends a
 full reboot only when restart does not resolve the underlying problem. The project has not received
