@@ -195,7 +195,34 @@ until their behavior is separately established.
 | `/hub/advanced/deleteScheduledJob?id=...` | Deletes scheduled work |
 | Backup creation, restoration or deletion endpoints | Can alter or replace durable hub data |
 | Radio enable, disable, reset, inclusion, exclusion and configuration endpoints | Can disrupt the Zigbee or Z-Wave network |
-| Reboot, shutdown, network-save and factory-reset endpoints | Administrative operations with potentially severe impact |
+| `POST /hub/restart` | Restarts the Hubitat platform process. Disruptive and explicitly excluded from this read-only harness. |
+| `POST /hub/reboot` | Reboots the complete hub. Causes hub downtime and is explicitly excluded from this read-only harness. |
+| Shutdown, network-save and factory-reset endpoints | Administrative operations with potentially severe impact |
+
+### Reboot and process-restart research lead
+
+The exact restart and reboot paths above are documented from Dominick Meglio's community
+[`Rebooter.groovy`](https://github.com/dcmeglio/hubitat-rebooter/blob/master/apps/Rebooter.groovy),
+not from a live call made by this harness. That app makes an in-process loopback request to
+`http://127.0.0.1:8080`:
+
+- `POST /hub/restart` restarts the Hubitat platform process;
+- `POST /hub/reboot` reboots the complete hub.
+
+When Hub Login Security is enabled, the app first sends the configured administrative username
+and password to `POST /login`, captures the returned `Set-Cookie` session value, and supplies that
+cookie with the restart or reboot request. Without Hub Login Security it sends the administrative
+request directly.
+
+The source defaults to process restart because it is faster and less disruptive, and recommends a
+full reboot only when restart does not resolve the underlying problem. The project has not received
+a material source update since 2020, so the paths, authentication sequence and behavior must be
+treated as undocumented historical evidence rather than a compatibility guarantee.
+
+These endpoints must not be added to `HubitatInternalApiLib.groovy` or
+`InternalEndpointTester.groovy`. Any future utility that exercises them belongs in a separately
+named administrative or destructive-operation harness with explicit user confirmation, backup and
+rollback preparation, response checking, and post-operation verification.
 
 Potentially passive but especially sensitive candidates such as `/logs/json`, `/logs/past/json`,
 `/hub/eventsJson`, `/hub/mdnsDevices/json`, `/hub2/localBackups`, `/hub2/cloudBackups`,
