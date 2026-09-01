@@ -1,0 +1,147 @@
+[CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
+param(
+    # Replace with your own Apps Script project's script ID (Project Settings
+    # -> Script ID in the Apps Script editor) - not a real value, deliberately.
+    [Parameter(Mandatory)][string]$ScriptId,
+    # Replace with your own Web App deployment's ID (the segment of the /exec
+    # URL between /macros/s/ and /exec).
+    [Parameter(Mandatory)][string]$DeploymentId,
+    [string]$SourcePath = (Join-Path $PSScriptRoot 'apps-script-webhook-template.gs'),
+    [string]$Description
+)
+
+<#
+.SYNOPSIS
+Generalized from Automation Map's own telemetry deploy script. Updates a live
+Google Apps Script Web App deployment from a local source file using clasp,
+verifying the deployment actually serves the version just pushed.
+
+.DESCRIPTION
+Requires Node.js and `npm install --global @google/clasp`, then `clasp login`
+once with the Google account that owns the target Apps Script project.
+
+Never hardcodes a real spreadsheet ID: this script pulls the CURRENTLY
+DEPLOYED SHEET_ID from the remote project first and re-inserts it into the
+uploaded source, so the local template's placeholder constant never
+overwrites a real configured value. Configure SHEET_ID once, directly in the
+Apps Script editor (see apps-script-webhook-template.gs's own deployment
+checklist) - this script only pushes code changes afterward, never the
+spreadsheet identity.
+#>
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+function Invoke-Clasp {
+    param([Parameter(Mandatory)][string[]]$Arguments)
+
+    $output = & $script:ClaspPath @Arguments 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "clasp $($Arguments -join ' ') failed:`n$($output -join [Environment]::NewLine)"
+    }
+    return @($output)
+}
+
+$script:Clasp = Get-Command clasp -ErrorAction SilentlyContinue
+if ($script:Clasp) {
+    $script:ClaspPath = $script:Clasp.Source
+}
+if (-not $script:Clasp) {
+    throw 'clasp was not found. Install Node.js 20 or newer, run npm install --global @google/clasp, then clasp login.'
+}
+
+if (-not (Test-Path -LiteralPath $SourcePath -PathType Leaf)) {
+    throw "Telemetry source was not found: $SourcePath"
+}
+
+$source = Get-Content -Raw -LiteralPath $SourcePath
+$versionMatch = [regex]::Match($source, "const SCRIPT_VERSION\s*=\s*'([^']+)';")
+if (-not $versionMatch.Success) {
+    throw 'SCRIPT_VERSION was not found in the telemetry source.'
+}
+$scriptVersion = $versionMatch.Groups[1].Value
+
+$placeholder = 'REPLACE_WITH_YOUR_SPREADSHEET_ID'
+$sheetConstantPattern = "const SHEET_ID\s*=\s*'$([regex]::Escape($placeholder))';"
+$sheetConstantRegex = [regex]::new($sheetConstantPattern)
+if ($sheetConstantRegex.Matches($source).Count -ne 1) {
+    throw 'The local source must contain exactly one spreadsheet ID placeholder constant.'
+}
+
+if (-not $Description) {
+    $Description = "Telemetry webhook $scriptVersion"
+}
+
+$tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+$workingDirectory = Join-Path $tempRoot ("apps-script-clasp-" + [guid]::NewGuid().ToString('N'))
+[void](New-Item -ItemType Directory -Path $workingDirectory -WhatIf:$false)
+
+try {
+    $claspConfig = @{ scriptId = $ScriptId; rootDir = '.' } | ConvertTo-Json
+    Set-Content -LiteralPath (Join-Path $workingDirectory '.clasp.json') -Value $claspConfig -Encoding utf8NoBOM -WhatIf:$false
+
+    Push-Location $workingDirectory
+    try {
+        [void](Invoke-Clasp -Arguments @('pull'))
+
+        $remoteCodePath = Join-Path $workingDirectory 'Code.js'
+        if (-not (Test-Path -LiteralPath $remoteCodePath -PathType Leaf)) {
+            $remoteCodePath = Join-Path $workingDirectory 'Code.gs'
+        }
+        if (-not (Test-Path -LiteralPath $remoteCodePath -PathType Leaf)) {
+            throw 'The remote project did not contain Code.js or Code.gs.'
+        }
+
+        $remoteSource = Get-Content -Raw -LiteralPath $remoteCodePath
+        $sheetMatch = [regex]::Match($remoteSource, "const SHEET_ID\s*=\s*'([^']+)';")
+        if (-not $sheetMatch.Success -or $sheetMatch.Groups[1].Value -eq $placeholder) {
+            throw 'The remote project does not contain a configured spreadsheet ID. Nothing was uploaded.'
+        }
+        $sheetId = $sheetMatch.Groups[1].Value
+
+        $deploymentListing = Invoke-Clasp -Arguments @('deployments')
+        if (($deploymentListing -join "`n") -notmatch [regex]::Escape($DeploymentId)) {
+            throw "Deployment ID $DeploymentId does not belong to script $ScriptId. Nothing was uploaded."
+        }
+
+        $uploadSource = $sheetConstantRegex.Replace($source, "const SHEET_ID = '$sheetId';", 1)
+        Set-Content -LiteralPath $remoteCodePath -Value $uploadSource -Encoding utf8NoBOM -WhatIf:$false
+
+        Write-Host "Target script:      $ScriptId"
+        Write-Host "Target deployment:  $DeploymentId"
+        Write-Host "Script version:     $scriptVersion"
+
+        if (-not $PSCmdlet.ShouldProcess($DeploymentId, "Upload and deploy telemetry webhook $scriptVersion")) {
+            return
+        }
+
+        [void](Invoke-Clasp -Arguments @('push', '--force'))
+        $versionOutput = Invoke-Clasp -Arguments @('version', $Description)
+        $createdVersion = [regex]::Matches(($versionOutput -join "`n"), '(?i)version\s+(\d+)') |
+            Select-Object -Last 1
+        if (-not $createdVersion) {
+            throw "clasp created a version but its number could not be parsed:`n$($versionOutput -join [Environment]::NewLine)"
+        }
+        $versionNumber = $createdVersion.Groups[1].Value
+
+        [void](Invoke-Clasp -Arguments @('redeploy', $DeploymentId, $versionNumber, $Description))
+
+        $endpoint = "https://script.google.com/macros/s/$DeploymentId/exec"
+        $live = Invoke-RestMethod -Uri $endpoint -MaximumRedirection 10 -TimeoutSec 30
+        if (-not $live.ok -or -not $live.configured -or $live.scriptVersion -ne $scriptVersion) {
+            throw "Deployment verification failed. Expected $scriptVersion, received $($live.scriptVersion)."
+        }
+
+        Write-Host "Verified live scriptVersion $($live.scriptVersion) at $endpoint"
+    }
+    finally {
+        Pop-Location
+    }
+}
+finally {
+    $resolvedWorkingDirectory = [IO.Path]::GetFullPath($workingDirectory)
+    if ($resolvedWorkingDirectory.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase) -and
+        (Test-Path -LiteralPath $resolvedWorkingDirectory)) {
+        Remove-Item -LiteralPath $resolvedWorkingDirectory -Recurse -Force -WhatIf:$false
+    }
+}
