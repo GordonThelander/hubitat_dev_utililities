@@ -124,6 +124,15 @@ is implemented - see the false-positive pitfall below.
   machine-specific data, anywhere in the generated content (including any generated header or
   sidecar metadata). Verify this directly: run the build twice from the same commit and diff the
   outputs - they must be byte-identical.
+- **Two runs in the same working copy is not a sufficient test of that**, and believing it is will
+  hide a whole class of defect. Anything the build reads off disk that the *checkout* controls
+  rather than the *commit* - line endings being the usual culprit - stays constant between two runs
+  in one directory and varies between two independently materialized checkouts of the identical
+  commit. Diff two separate fresh checkouts, ideally created under different client settings, not
+  two runs in the same folder. Text a generator reads must be canonicalized on the way in (and the
+  finished artifact asserted to hold only the canonical form), because the version-control system's
+  own content hashing may normalize exactly what the generator preserves, letting provenance pass
+  while the bytes differ.
 - Writing the destination: remove any pre-existing file/directory at the target path *before* any
   real work begins (not just before the final write) - so any later failure, for any reason, leaves
   the target absent rather than a stale prior success that could be mistaken for the new build's
@@ -159,6 +168,22 @@ one more layer rather than trusting "two commands run close together":
 
 ## Pitfalls actually hit building this
 
+- **Line endings quietly break commit-purity, and the provenance check cannot see it.** The most
+  expensive defect in this whole pattern. Git normalizes line endings when it hashes content, so a
+  worktree holding CRLF still verifies clean against an LF blob - while the generator, reading raw
+  bytes off disk, produces a materially different artifact. Provenance passes, the output differs,
+  and nothing reports a problem. It surfaced when a routine branch switch on a client with
+  `core.autocrlf` enabled rewrote the working copy, and the next build produced a *mixed* CRLF/LF
+  artifact. Three separate paths carried it, and finding one is not finding them all: the source
+  file read, the generated header (a literal in the generator's own source file, so it inherited
+  *that* file's checkout), and a human-authored text input embedded verbatim into a JSON string
+  value, where CRLF escaped as `\r\n` and changed the bytes. Fix at every boundary text enters:
+  canonicalize on read, canonicalize any literal the tool itself contributes, and assert the
+  finished artifact contains only the canonical form rather than trusting that canonicalization
+  held. Then declare the policy in version control too (`.gitattributes` with an explicit `eol`
+  for the build inputs), which both stops the rewrite happening and - a useful side effect - makes
+  the version-control system itself flag a corrupted working copy as dirty, so provenance refuses
+  the build instead of proceeding silently.
 - **A loose "does this forbidden value appear anywhere" leak-check false-positives on legitimate
   content.** Twice, independently, in two different generators for this exact pattern: a runtime
   string or a curated text field that happens to *mention* a Dev-only identity as ordinary prose (a
