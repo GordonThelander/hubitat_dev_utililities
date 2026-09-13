@@ -1,5 +1,9 @@
 # webCoRE on Hubitat developer reference
 
+Author: Gordon Thelander
+
+Contributor: @thebearmay
+
 A source-pinned reference for reading and statically analysing webCoRE pistons on Hubitat: how pistons
 are stored, the compiled grammar, device and variable resolution, the evidence levels behind each
 claim, and tested Groovy implementations of the core contracts.
