@@ -47,3 +47,9 @@ claim, and tested Groovy implementations of the core contracts.
 Read-only inspection, documentation, dependency mapping and static analysis. The compiled format is
 internal to webCoRE: do not write chunks directly or infer runtime behaviour from saved structure
 alone (see architecture section 7).
+
+## License
+
+This reference and its snippets are covered by the repository's [Apache License 2.0](../LICENSE).
+webCoRE itself is a separate Apache 2.0 project; names and facts cited from its source remain its
+authors' work.
