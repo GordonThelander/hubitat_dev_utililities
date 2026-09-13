@@ -16,13 +16,20 @@ claim, and tested Groovy implementations of the core contracts.
 | `automation_map_application.md` | A production application of the model |
 | `known_gaps.md` | Constructs and behaviour not yet proven |
 | `snippets/README.md` | Local and Hubitat execution instructions for the reference code |
-| `snippets/01_decode_piston_chunks.groovy` | Decode bounded, contiguous `chunk:N` settings into a JSON object |
-| `snippets/02_device_hash_lookup.groovy` | Build and resolve a parent-scoped webCoRE device-token index |
-| `snippets/03_variable_namespaces_and_roles.groovy` | Classify variable namespaces and derive read/write direction |
-| `snippets/04_device_reads_and_actions.groovy` | Extract direct device reads, roles and action targets |
-| `snippets/05_bounded_structure_walker.groovy` | Account for saved structure within fixed traversal budgets |
-| `snippets/06_flow_labels.groovy` | Render bounded, all-or-nothing plain-text flow labels |
-| `snippets/07_webcore_reference_harness.groovy` | Installable read-only Hubitat app that runs all six contracts |
+| `snippets/contracts/` | Reusable, self-checking Groovy logic for the six reference contracts |
+| `snippets/hub-ready-apps/` | Complete, installable read-only Hubitat apps |
+| `snippets/contracts/01_decode_piston_chunks.groovy` | Decode bounded, contiguous `chunk:N` settings into a JSON object |
+| `snippets/contracts/02_device_hash_lookup.groovy` | Build and resolve a parent-scoped webCoRE device-token index |
+| `snippets/contracts/03_variable_namespaces_and_roles.groovy` | Classify variable namespaces and derive read/write direction |
+| `snippets/contracts/04_device_reads_and_actions.groovy` | Extract direct device reads, roles and action targets |
+| `snippets/contracts/05_bounded_structure_walker.groovy` | Account for saved structure within fixed traversal budgets |
+| `snippets/contracts/06_flow_labels.groovy` | Render bounded, all-or-nothing plain-text flow labels |
+| `snippets/hub-ready-apps/07_webcore_reference_harness.groovy` | Installable read-only Hubitat app that runs all six contracts |
+| `snippets/hub-ready-apps/08_wc_local_variable_extract.groovy` | Installable read-only Hubitat app that lists one piston's declared local variables and whether they are referenced |
+
+The standalone local-variable extractor remains at its
+[original public location](https://github.com/GordonThelander/hubitat-automation-map/blob/dev/tools/webcore-investigation/wc-local-variable-extract.groovy).
+The hub-ready copy is retained here so the reusable app is discoverable with the reference.
 
 ## Baseline
 

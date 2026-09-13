@@ -1,22 +1,24 @@
 # webCoRE reference snippets
 
-Small, self-checking Groovy implementations of the contracts in this reference. Each file runs
-unchanged under local Groovy and pastes into a Hubitat app as ordinary methods.
+Small, self-checking Groovy implementations of the contracts in this reference, plus installable
+read-only Hubitat utilities. Files 01 to 06 run unchanged under local Groovy and paste into a Hubitat
+app as ordinary methods. Files 07 and 08 are complete Hubitat apps.
 
 | File | Contract | Reference section |
 | --- | --- | --- |
-| `01_decode_piston_chunks.groovy` | `chunk:N` selection, bounds, Base64, UTF-8, emoji, JSON root | Architecture 5 |
-| `02_device_hash_lookup.groovy` | Device token formula, parent permitted devices, unique resolution | Device and variable resolution 2 |
-| `03_variable_namespaces_and_roles.groovy` | Local, `@`, `@@`, `$` identity; read/write by position | Device and variable resolution 6 to 10 |
-| `04_device_reads_and_actions.groovy` | Device reads with trigger/constraint role, actions, fixed issue codes | Device and variable resolution 3 to 5 |
-| `05_bounded_structure_walker.groovy` | Depth, visit and scalar budgets; path-only findings | Evidence model 3 |
-| `06_flow_labels.groovy` | Plain-text task, condition and event labels, all-or-nothing | Statement and operand catalogue |
-| `07_webcore_reference_harness.groovy` | Installable read-only Hubitat app containing all six contracts | This directory |
+| `contracts/01_decode_piston_chunks.groovy` | `chunk:N` selection, bounds, Base64, UTF-8, emoji, JSON root | Architecture 5 |
+| `contracts/02_device_hash_lookup.groovy` | Device token formula, parent permitted devices, unique resolution | Device and variable resolution 2 |
+| `contracts/03_variable_namespaces_and_roles.groovy` | Local, `@`, `@@`, `$` identity; read/write by position | Device and variable resolution 6 to 10 |
+| `contracts/04_device_reads_and_actions.groovy` | Device reads with trigger/constraint role, actions, fixed issue codes | Device and variable resolution 3 to 5 |
+| `contracts/05_bounded_structure_walker.groovy` | Depth, visit and scalar budgets; path-only findings | Evidence model 3 |
+| `contracts/06_flow_labels.groovy` | Plain-text task, condition and event labels, all-or-nothing | Statement and operand catalogue |
+| `hub-ready-apps/07_webcore_reference_harness.groovy` | Installable read-only Hubitat app containing all six contracts | This directory |
+| `hub-ready-apps/08_wc_local_variable_extract.groovy` | Installable read-only app listing one piston's declared local variables and whether each is referenced | Device and variable resolution 7 |
 
 ## Run locally
 
 ```bash
-groovy 01_decode_piston_chunks.groovy
+groovy contracts/01_decode_piston_chunks.groovy
 ```
 
 Files 01 to 06 end with assertions and print one `PASS` line. Local execution verifies the logic,
@@ -25,7 +27,7 @@ not Hubitat runtime compatibility.
 ## Run the complete harness on Hubitat
 
 1. Open **Apps Code** in the Hubitat administrative interface.
-2. Select **New App**, paste `07_webcore_reference_harness.groovy`, then save it.
+2. Select **New App**, paste `hub-ready-apps/07_webcore_reference_harness.groovy`, then save it.
 3. Open **Apps**, select **Add User App**, then install **webCoRE Reference Harness**.
 4. Select **Run contract self-checks**. The six contracts must all report `PASS`.
 5. To inspect a live piston, open that piston from Hubitat's Apps page and copy the numeric installed-
@@ -36,6 +38,19 @@ The harness reads the selected installed apps through Hubitat's loopback `status
 does not write to webCoRE or retain decoded content. Its saved report contains only fixed result
 codes and aggregate counts. The endpoint is internal and undocumented, so rerun the contract checks
 after a Hubitat platform update.
+
+## Run the local-variable extractor on Hubitat
+
+1. Open **Apps Code** in the Hubitat administrative interface.
+2. Select **New App**, paste `hub-ready-apps/08_wc_local_variable_extract.groovy`, then save it.
+3. Open **Apps**, select **Add User App**, then install **WC Local Variable Extract**.
+4. Select a piston, press **Update**, then select **Extract local variables**.
+
+The extractor reads the selected piston's saved `chunk:N` configuration through Hubitat's loopback
+`statusJson` endpoint and lists declarations from the document's root `v` array. It also reports
+whether each declared name appears in a typed variable operand. It does not read variable values or
+write to the piston, Hub Variables, or devices. The maintained original remains
+[in Automation Map](https://github.com/GordonThelander/hubitat-automation-map/blob/dev/tools/webcore-investigation/wc-local-variable-extract.groovy).
 
 ## Reuse individual contracts on Hubitat
 

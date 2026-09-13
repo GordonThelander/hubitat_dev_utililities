@@ -28,7 +28,7 @@ Known editor data (`zc`, `data`) is reported as opaque and still traversed for b
 Report recognised and unidentified counts. Do not show a completeness percentage while the walk is
 truncated or unidentified positions remain.
 
-Implementation: [`snippets/05_bounded_structure_walker.groovy`](snippets/05_bounded_structure_walker.groovy).
+Implementation: [`snippets/contracts/05_bounded_structure_walker.groovy`](snippets/contracts/05_bounded_structure_walker.groovy).
 
 ## 3. Fixture capture
 

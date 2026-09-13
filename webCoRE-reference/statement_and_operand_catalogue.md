@@ -110,7 +110,7 @@ No expression-text parser is needed to read it.
 ## Comparisons and `ct`
 
 The parent's `getChildComparisons()` defines 48 trigger comparisons and 35 condition comparisons (full
-lists in [`snippets/04_device_reads_and_actions.groovy`](snippets/04_device_reads_and_actions.groovy)).
+lists in [`snippets/contracts/04_device_reads_and_actions.groovy`](snippets/contracts/04_device_reads_and_actions.groovy)).
 `is_true`, `is_false`, `was_true` and `was_false` are commented out in source and not in the live set.
 
 `ct` records which block applied: `t` trigger, `c` condition. `subscribeAll` can downgrade a trigger

@@ -30,7 +30,7 @@ installation's permissions never resolve another installation's piston.
 
 Never resolve by label and never create a device from an unmatched token.
 
-Implementation: [`snippets/02_device_hash_lookup.groovy`](snippets/02_device_hash_lookup.groovy).
+Implementation: [`snippets/contracts/02_device_hash_lookup.groovy`](snippets/contracts/02_device_hash_lookup.groovy).
 
 ## 3. Device reads
 
@@ -50,7 +50,7 @@ operands `p`. A resolved target is an action relationship; the command names tra
 
 When a piston reads and acts on the same device, keep both relationships.
 
-Implementation: [`snippets/04_device_reads_and_actions.groovy`](snippets/04_device_reads_and_actions.groovy).
+Implementation: [`snippets/contracts/04_device_reads_and_actions.groovy`](snippets/contracts/04_device_reads_and_actions.groovy).
 
 ## 5. Device references that cannot be resolved statically
 
@@ -82,6 +82,10 @@ Each entry in root `v` has name `n`, type `t` and optionally an initial value op
 variable's initial value is a device-list operand whose `d` holds tokens. Report each local as declared
 only, read, written, or both.
 
+The installable [`WC Local Variable Extract`](snippets/hub-ready-apps/08_wc_local_variable_extract.groovy) provides
+a focused, read-only inspection of these declarations on a Hubitat hub. Its maintained source remains
+at the [original public location](https://github.com/GordonThelander/hubitat-automation-map/blob/dev/tools/webcore-investigation/wc-local-variable-extract.groovy).
+
 ## 8. Read and write direction
 
 Direction comes from position, never from the name.
@@ -99,7 +103,7 @@ Direction comes from position, never from the name.
 
 Directions accumulate per variable.
 
-Implementation: [`snippets/03_variable_namespaces_and_roles.groovy`](snippets/03_variable_namespaces_and_roles.groovy).
+Implementation: [`snippets/contracts/03_variable_namespaces_and_roles.groovy`](snippets/contracts/03_variable_namespaces_and_roles.groovy).
 
 ## 9. Hub Variables
 

@@ -72,7 +72,7 @@ Decode sequence:
 
 No chunks at all means a piston that was never saved (`not-present`), not corruption.
 
-Implementation: [`snippets/01_decode_piston_chunks.groovy`](snippets/01_decode_piston_chunks.groovy).
+Implementation: [`snippets/contracts/01_decode_piston_chunks.groovy`](snippets/contracts/01_decode_piston_chunks.groovy).
 
 Base64 is encoding, not encryption. Treat raw chunks and the decoded document as sensitive.
 
@@ -170,7 +170,7 @@ Keep four measures separate:
 | Semantics | Is the runtime meaning proven (L4)? |
 
 Levels: [evidence_model_and_fixture_method.md](evidence_model_and_fixture_method.md). Walker:
-[`snippets/05_bounded_structure_walker.groovy`](snippets/05_bounded_structure_walker.groovy).
+[`snippets/contracts/05_bounded_structure_walker.groovy`](snippets/contracts/05_bounded_structure_walker.groovy).
 
 ## 7. Interpretation boundary
 
