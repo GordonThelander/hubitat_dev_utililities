@@ -50,10 +50,16 @@ No files needed - this is a small pattern to copy into an app directly, not a se
    call/function - not evaluated first and passed through a logging wrapper, since that still
    builds the message string even when logging is off. The point of the gate is that a disabled
    toggle costs one boolean test, nothing more.
-3. An auto-disable timer (`runIn(3600, 'disableDiagnosticLogging')` or similar), (re)scheduled
-   whenever the toggle turns on and cancelled if the user turns it off early, so a session can
-   never be left running by accident. Reschedule it from `updated()` too, not only the point where
-   the user flips the toggle, so a hub reboot mid-session doesn't leave it stuck on indefinitely.
+3. A **durable deadline, not just a scheduled job**: a one-shot `runIn()` job does not fire late or
+   catch up if the hub is down when it comes due (unlike a recurring `schedule()`, which Hubitat
+   does re-establish) - a scheduled-only auto-disable can leave the toggle stuck on if the hub
+   happens to reboot mid-session. Store a real expiry timestamp (`now() + 3600000`) once, the
+   moment the toggle transitions off to on - not on every later settings save, which would
+   otherwise silently extend the window each time the user saves anything else while it's on. Make
+   the gate function itself check that timestamp (`now() < expiry`), not only the setting, so the
+   toggle is correctly treated as expired even if the scheduled disable job was missed - and
+   reconcile the displayed setting back to `false` the next time the settings page renders, so nothing
+   shows as on past its real deadline.
 4. A severity split, decided per-line, not applied uniformly: routine/lifecycle chatter (install/
    update confirmations, scheduling confirmations, endpoint-entry logs, successful-save
    confirmations, expected discard-of-superseded-work messages, verbose trace/debug detail) is
@@ -67,23 +73,53 @@ No files needed - this is a small pattern to copy into an app directly, not a se
 globals):
 
 ```groovy
+// The durable expiry (state.diagnosticLoggingExpiresAt) is the real
+// authority - the setting alone is not enough (see point 3 above).
 boolean diagOn() {
-    return settings.diagnosticLoggingEnabled == true
+    if (settings.diagnosticLoggingEnabled != true) return false
+    Long expiresAt = (state.diagnosticLoggingExpiresAt ?: 0) as Long
+    return expiresAt > 0 && now() < expiresAt
 }
 
+// Sets the deadline ONCE, on the off-to-on transition only - an unrelated
+// later settings save while this stays on must not push it out further.
 void scheduleDiagnosticLoggingExpiry() {
-    unschedule('disableDiagnosticLogging')
-    if (settings.diagnosticLoggingEnabled == true) {
+    if (settings.diagnosticLoggingEnabled != true) {
+        unschedule('disableDiagnosticLogging')
+        state.remove('diagnosticLoggingExpiresAt')
+        return
+    }
+    if (!state.diagnosticLoggingExpiresAt) {
+        state.diagnosticLoggingExpiresAt = now() + 3600000L
+        unschedule('disableDiagnosticLogging')
         runIn(3600, 'disableDiagnosticLogging')
     }
 }
 
 void disableDiagnosticLogging() {
     app.updateSetting('diagnosticLoggingEnabled', [type: 'bool', value: false])
+    state.remove('diagnosticLoggingExpiresAt')
     log.info "${app.label}: diagnostic logging auto-disabled after one hour"
 }
 
-// Settings page:
+// Settings page - call scheduleDiagnosticLoggingExpiry() from updated() AND
+// at the top of the settings page itself, in that order, BEFORE the stale-
+// on reconciliation below. This is not redundant: the toggle uses
+// submitOnChange, which saves the setting and re-renders the page WITHOUT
+// calling updated() - Done/Save Preferences is a separate, later event that
+// calls updated(). Without also calling it on page render, the very first
+// render after a user turns the toggle on would see the setting already
+// true but no deadline set yet, and the reconciliation check would
+// immediately flip it back off before updated() ever runs - the toggle
+// would appear to do nothing. Calling it first is safe precisely because
+// it is idempotent (see its own `if (!state.diagnosticLoggingExpiresAt)`
+// guard above) - it only ever sets the deadline once, on a genuine
+// off-to-on transition; every later call, from either place, is a no-op
+// while it's already on.
+//   scheduleDiagnosticLoggingExpiry()
+//   if (settings.diagnosticLoggingEnabled == true && !diagOn()) {
+//       disableDiagnosticLogging()
+//   }
 //   paragraph "Writes extra detail to your hub's Logs page for troubleshooting -
 //              nothing here is transmitted anywhere. Off by default, and turns
 //              itself back off automatically after one hour."
@@ -97,7 +133,9 @@ if (diagOn()) log.info "${app.label}: scan started"
 log.warn "${app.label}: could not list devices: ${result.error}"
 ```
 
-Call `scheduleDiagnosticLoggingExpiry()` from `updated()`.
+Call `scheduleDiagnosticLoggingExpiry()` from **both** `updated()` and the dynamic-page render,
+before the stale-on reconciliation check - see the comment above the settings-page snippet for why
+the page-render call is not redundant with the `updated()` one.
 
 ## Remote aggregate telemetry pattern
 
