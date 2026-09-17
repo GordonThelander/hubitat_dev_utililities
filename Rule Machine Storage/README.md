@@ -53,6 +53,13 @@ against 38 Rule-5.1 rules. Additional deliberately constructed fixtures covered 
 that the production corpus did not exercise. Every technical claim is marked as invariant,
 strong, limited, single, heuristic, or unknown.
 
+Updated 2026-09-18: both documents were cross-checked against the source of the community
+Hubitat Local MCP Server, which drives Rule Machine through its wizard rather than reading it,
+and re-verified across 66 rules on platform 2.5.1.183. That pass corrected two claims (an
+action does not always carry `actType`, and condition grouping is stored in a `parens` key)
+and added a section recording write-side behaviour this read-only work cannot reach. Claims
+taken from that source are marked `[external]` and are not independently verified here.
+
 The main discovery method was differential, read-only comparison:
 
 1. Read the stored representation of a known rule.
@@ -87,7 +94,10 @@ When implementing a reader:
 - verify every decoded rule against its Hubitat UI representation;
 - fail visibly when a field is unknown instead of manufacturing a plausible meaning;
 - treat live event subscriptions as a snapshot because Rule Machine can remove trigger
-  subscriptions while a Required Expression is false.
+  subscriptions while a Required Expression is false, and also while a rule is paused or
+  stopped;
+- key an action scan on `actSubType.<n>`, since block closers such as END-IF carry no
+  `actType.<n>`.
 
 ## Provenance
 
