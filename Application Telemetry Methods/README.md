@@ -180,3 +180,8 @@ identifier is a placeholder with a comment explaining what to replace it with an
 real value. Follow the deployment checklist at the top of `apps-script-webhook-template.gs` in
 order; step numbers there matter, particularly around confirming a live deployment actually serves
 the version you just edited, which is not automatic in the Apps Script editor.
+
+## Performance diagnosis case study
+
+[HAI Runtime latency and state](hai-runtime-performance-case-study.md) records a measured Hubitat
+app performance investigation, the failed hypotheses, and a reusable timing method.
