@@ -2,7 +2,7 @@
 
 **Date:** 23 September 2026 (AWST)  
 **System:** Hubitat Automation Intelligence (HAI) on a Dev hub  
-**Decision:** The owner accepted the measured latency for an alpha release. This does not authorize production deployment, relax device safeguards, or establish a safe large-scale parent-state bound.
+**Decision:** The owner accepted the measured latency and a capped rule count for alpha. The release cap still needs enforcement. This does not authorize production deployment, relax device safeguards, or establish a safe large-scale parent-state bound.
 
 ## Executive finding
 
@@ -65,7 +65,7 @@ A candidate design, not an implemented result, is a compact parent index of rule
 
 ## Alpha disposition and follow-up
 
-The owner accepted the current latency for alpha on 23 September 2026. The retained Dev source is SHA-256 `13b8eb2ca4a3a1bffc45e2172ae89724e928f88380b30f3d88558710110ae93e`, restored and verified at Apps Code revision 127. The three comparable warm results above came from the same source at revision 125. This is a Dev source result, **not** a production promotion or a complete release-readiness claim. The independent editor-to-Runtime functional check on the existing virtual rule had passed earlier at epoch 9; the later three warm version updates reached `active` and kept all 40 children.
+The owner accepted the current latency and a capped rule count for alpha on 23 September 2026, with parent-state ownership redesign deferred. The installed Dev build enforces 40 rules; the planned 32-rule release cap is not yet an installed production control and must be enforced and verified during release preparation. The retained Dev source is SHA-256 `13b8eb2ca4a3a1bffc45e2172ae89724e928f88380b30f3d88558710110ae93e`, restored and verified at Apps Code revision 127. The three comparable warm results above came from the same source at revision 125. This is a Dev source result, **not** a production promotion or a complete release-readiness claim. The independent editor-to-Runtime functional check on the existing virtual rule had passed earlier at epoch 9; the later three warm version updates reached `active` and kept all 40 children.
 
 If the original speed targets return, a small, dedicated Runtime-owned intake with a durable signed receipt is the credible path to test for sub-second acceptance; the heavy parent and a second scheduled worker did not meet it. A faster editor confirmation may use a bounded, authenticated child-commit signal, but it must not claim running before the child's state is durable or lose the parent's claim validation. Both are architectural candidates, not measured solutions. State ownership and a realistic migration-load ceiling should be addressed before promising hundreds of rules.
 
