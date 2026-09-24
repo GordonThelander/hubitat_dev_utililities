@@ -470,6 +470,8 @@ The condition and trigger sides use the same asymmetry as `tDev`/`rDev_`: **[str
 | `isDev_<n>` | condition | true reveals a device-relative comparison |
 | `isVar_<n>` | condition | true reveals a variable-to-variable comparison |
 | `AlltDev<n>` | trigger | "all of these" rather than any |
+| `AllrDev_<n>` | condition | the same qualifier, underscore form: `"true"` is all, empty is any |
+| `AlltDev-<n>` | Wait for Events row | the same qualifier again, dash-indexed with the rest of that family |
 | `stays<n>`, `SHours<n>`, `SMins<n>`, `SSecs<n>` | trigger | "and stays" duration |
 | `disableT<n>` | trigger | one trigger disabled in place |
 | `isCondTrig<n>`, `condTrig<n>` | trigger | a condition attached to one trigger row |
@@ -523,6 +525,14 @@ settings whose index is separated by a **dash**: `tCapab-<n>`, `tDev-<n>`, `tsta
 `stays-<n>`, `SHours-<n>`. Rule 1230 carries `tCapab-5 = Certain Time (and optional date)`,
 `tDev-4`, `tstate-4 = closed`. A device in `tDev-4` is a wait target; a device in `tDev4`
 is a trigger. Read the dash. **[strong]**
+
+A Wait for Events carries its own all-or-any qualifier per row in `AlltDev-<n>`, and **its rows are
+OR'd together**. Rule 1230 holds `tCapab-4 = Contact` with five doors, `tstate-4 = closed` and
+`AlltDev-4 = "true"` alongside `tCapab-5 = Certain Time (and optional date)` with `atTime-5 =
+02:00`, and renders as "... all contact is closed / OR When time is 02:00". So "all" is within a
+row and "or" is between rows. A multi-device threshold puts the qualifier where the operator would
+go, rendering "Back Garden Left, Back Garden Right(1, 1) all >= 500" rather than "is >= 500".
+Found by the other engine's session and confirmed here against 1230's live settings. **[strong]**
 
 Because the keys are rule-scoped rather than per-action, **only one Wait for Events action can
 exist per rule**: a second overwrites the first. The MCP server reports the same limit in
@@ -777,6 +787,77 @@ This is the sharpest case of the rule stated in 7.3 and section 9: **RM's render
 the author typed, not what the device receives.** Here the rendering is correct and the behaviour
 is wrong, so no comparison of rendered text between two engines can detect it. Only running both
 and reading what each device actually received will. **[strong]**
+
+### 7.7 The wizard discloses progressively, so a key's absence proves nothing
+
+Rule Machine's action page builds itself as you fill it in. A field does not exist in the page
+schema until whatever it depends on has a value, which means **reading a schema snapshot and
+concluding "this action has no such setting" is unsound**. Three distinct kinds of conditional
+visibility were measured on 2026-09-25, and they fail in different ways.
+
+**1. A field revealed by an earlier field in the same action.**
+
+| Appears | Once this is set |
+| --- | --- |
+| `actSubType.<n>` | `actType.<n>` |
+| `devices.<n>` | `myCapab.<n>` (Run Custom Action) |
+| `cCmd.<n>`, `meter.<n>` | `devices.<n>` |
+| `meterMillis.<n>` | `meter.<n>` is true |
+| `cpType<i>.<n>` / `cpVal<i>.<n>`, `moreParams` | `cCmd.<n>` |
+| `color.<n>`, `colorLevel.<n>`, `uVar.<n>` | `bulbs.<n>` |
+| `colorH.<n>` or `colorHex`+`colorSat`+`colorLevel` | the mode chosen in `color.<n>` (see 7.3) |
+| `onOff.<n>`, `optSwitch.<n>`, `trackSwitch.<n>`, `delayAct.<n>` | `onOffSwitch.<n>` |
+| `delayHour`/`delayMinute`/`delaySecond` | `delayAct.<n>` = `hrs:min:sec` |
+| `xVar.<n>` | `delayAct.<n>` = `variable` |
+| `tstate<n>` | `tCapab<n>` **and** `tDev<n>` |
+| `actionDone` | every required field for the chosen subtype |
+
+The MCP rule server documents the same thing from its own side: "doActPage's schema is incremental
+-- `actionDone` only appears after all required type-specific fields are set". **[strong]**
+
+**2. A field revealed by content elsewhere in the rule.** The time and date format pickers appear on
+the rule's *main* page only when some action uses `%time%`, `%now%` or `%date%`. The stored key for
+the first is `timeFormat` (rule 2100 holds `"HH:mm"`). The date picker's key has not been observed,
+because no rule read so far has had one saved. This kind is the nastiest to reason about, because
+the revealing content is in a different action from the revealed setting. **[strong]** for the
+reveal, **[unknown]** for the date key name.
+
+**3. A subtype or capability revealed by what is installed on the hub.** The MCP server's reference
+records that the garage-door and valve subtypes of `lockActs` are "only visible with the
+corresponding device", and that `getSetHSM` "appears only when HSM is installed on the hub". All
+five `lockActs` subtypes are visible on this hub because it has all five device kinds, so this
+could not be disproved here, only cited. **[external]**
+
+The consequence is worth stating plainly: **Rule Machine's authoring vocabulary on a given hub is a
+function of what that hub owns.** No enumeration taken from one hub can be complete, and a tool
+that builds its expectations by enumerating one hub inherits that hub's device list as a silent
+assumption.
+
+#### 7.7.1 The action subtypes the picker offers
+
+Read from the `actSubType` enum for each of the twelve `actType` families on a C-8 running 2.5.1.183
+with a full device complement. **73 subtypes.**
+
+| Family | Subtypes |
+| --- | --- |
+| `condActs` | getIfThen, getCondAct |
+| `switchActs` | getOnOffSwitch, getToggleSwitch, getFlashSwitch, getModeSwitch, getChooseSwitch, getPushButton, getPushButtonPerMode, getChooseButton |
+| `dimmerActs` | getSetDimmer, getToggleDimmer, getAdjustDimmer, getDimmersPerMode, getFadeDimmer, getStopFade, getRLDimmer, getStopDimmer, getSetColor, getToggleColor, getColorPerMode, getSetColorTemp, getToggleColorTemp, getColorTempPerMode, getFadeCT, getStopCTFade |
+| `sceneActs` | getRLShade, getShadePosition, getStopShade, getFanSpeed, getAdjustFan |
+| `lockActs` | getSetHSM, getOCGarage, getLULock, getOCValve, getSetThermostat |
+| `messageActs` | getMsg, getLogMsg, getHTTPGet, getHTTPPost, getPingIP |
+| `soundActs` | getSetMusicPlayer, getSetVolume, getMuteUnmute, getTone, getChime, getSiren |
+| `modeActs` | getSetVariable, getSetMode, getDefinedAction, getWriteLocalFile, getAppendLocalFile, getDeleteLocalFile |
+| `rulesActs` | getSetPrivateBoolean, getRuleActions, getStopActions, getPauseResumeRules |
+| `deviceActs` | getCapture, getRestore, getRefreshSwitch, getPollSwitch, getDisable, getStartStopZPoll |
+| `repeatActs` | getRepeat, getWhile, getStopRepeat |
+| `delayActs` | getDelay, getDelayPerMode, getCancelDelay, getWaitEvents, getWaitRule, getExitRule, getComment |
+
+**This list is not the set of `actSubType` values a rule can store.** `getElse`, `getElseIf` and
+`getEndIf` are all written into real rules and appear in none of these pickers, because RM creates
+them from dedicated buttons (`butElse`, `butEndIf`) rather than from the subtype menu. So even a
+complete sweep of the authoring surface under-reports the storage format, which is the same shape
+of error as reading a rendering and assuming it describes the command. **[strong]**
 
 ## 8. Acting on other rules
 
