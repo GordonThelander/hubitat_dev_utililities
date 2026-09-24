@@ -528,6 +528,39 @@ Because the keys are rule-scoped rather than per-action, **only one Wait for Eve
 exist per rule**: a second overwrites the first. The MCP server reports the same limit in
 Hubitat's own UI. **[external]**
 
+### 6.4 A Location Event trigger subscribes by name alone
+
+A trigger on a hub-level event stores only two keys, with a bare index and no dash:
+
+| Setting | Value |
+| --- | --- |
+| `tCapab<n>` | `Location Event` |
+| `tstate<n>` | the event name, e.g. `lowMemory`, `severeLoad` |
+
+There is no device, comparator or value. The rule fires on any occurrence of that named event.
+Rule 2100 carries `tCapab12 / tstate12 = lowMemory` and `tCapab47 / tstate47 = severeLoad`.
+
+The event's payload reaches the actions through the usual tokens. `severeLoad` was observed
+with `%value% = 2.52` and `%text% = "Severe hub CPU load detected"`, so it carries a numeric
+load figure.
+
+`lowMemory` was measured on 2026-09-24 from seven days of location-event history, five occurrences:
+
+| Field | Value |
+| --- | --- |
+| `name` | `lowMemory` |
+| `value` | free memory in **KB**, as a string: `63352`, `59888`, `37808`, `52300`, `62720` |
+| `unit` | `null` - the KB are not carried, a consumer has to know them |
+| `descriptionText` | `Hub memory is low` |
+| `type` | `SYSTEM` |
+| `isStateChange` | `true` |
+
+The scale is corroborated by the hub reporting `freeMemoryKB` of 169252 while healthy. The event
+repeats while memory stays low rather than firing once per episode: three occurrences on
+2026-09-20 at 17:10, 17:20 and 17:25. With `isStateChange` true each one is delivered, so a rule
+triggered on it runs every time, which is what rule 2100 relies on when it counts occurrences.
+**[strong]**
+
 ## 7. Action parameters by family
 
 Once you know an action's `actSubType`, its parameters follow a `<prefix>.<n>` convention.
@@ -538,10 +571,11 @@ A non-exhaustive list of ones confirmed on a live hub:
 | `getOnOffSwitch` | `onOffSwitch.<n>` device, `onOff.<n>` true/false |
 | `getSetColorTemp` | `ct.<n>` device, `ctL.<n>` kelvin, `ctLevel.<n>` level |
 | `getSetVolume` | `volume.<n>` device, `volumeVal.<n>` level |
-| `getMsg` | `msg.<n>` text, plus a device picker for the target |
+| `getMsg` | `msg.<n>` text, plus **two** independent device pickers - see 7.2 |
 | `getDelay` | `delaySecond.<n>`, `delayMin.<n>`, `delayAct.<n>` |
 | `getWaitRule` | condition via the action's `rule` field, `delay` on the action for timeout |
 | `getIfThen`, `getElseIf` | condition via the action's `rule` field |
+| `getDefinedAction` | `devices.<n>` device list, `myCapab.<n>` capability, `cCmd.<n>` command, `meter.<n>`, `meterMillis.<n>` |
 
 Most actions also carry `delayAct.<n>`, which is `none` unless the individual action has its
 own delay.
@@ -549,6 +583,157 @@ own delay.
 The reliable general approach is: for action `n`, collect every setting whose name ends in
 `.<n>`. That finds the parameters without needing a table for every action type, which
 matters because the list above is certainly incomplete.
+
+### 7.4 A delay can take its length from a variable, and the unit is not stored
+
+A Delay action normally carries `delayHour.<n>` / `delayMinute.<n>` / `delaySecond.<n>`. It can
+instead take its length from a variable, in which case `xVar.<n>` names the variable and **no
+time field is present at all**.
+
+The settings do not record the unit. Nothing stored says whether the variable holds seconds or
+minutes, so a reader cannot recover the intended duration from the rule alone. Anything
+converting this has to carry the operand and stop, rather than assume a unit: guessing wrong
+produces a rule that waits sixty times too long or too short while reading as correct
+everywhere. **[strong]**
+
+### 7.2 A message action carries two device pickers, not one
+
+`getMsg` holds two unrelated target lists on the same action, and a rule commonly populates
+both:
+
+| Setting | Target |
+| --- | --- |
+| `note.<n>` | notification devices |
+| `speakDevice.<n>` | speech devices |
+| `speakVolume.<n>` | volume for the speech devices, may be blank |
+
+Reading only `note.<n>` loses every spoken announcement while the action still decodes as a
+message, so the failure is silent. Found across a 62-rule corpus where nine messages decoded
+to no target at all; a four-rule sample showed none of them. **[strong]**
+
+`ranMsg.<n>` sits beside these and selects a random message variant rather than a target.
+
+### 7.3 The colour keys are named the opposite way round from what you would assume
+
+**Corrected 2026-09-24.** This section previously said `colorH.<n>` carries a hue percentage and
+holds a hex string only for a custom colour. That was wrong in both halves. It was contradicted
+by the other engine's reading of 62 live rules and then settled by walking RM's own action
+wizard and reading the input definitions it emits.
+
+`color.<n>` holds the picker's mode, and the mode decides which other keys exist:
+
+| `color.<n>` | Keys that appear | Input type |
+| --- | --- | --- |
+| a colour name (`Red`, `Soft White`, ...) | `colorLevel.<n>` | number, "Bulb level?" |
+| `Pick a Color` | `colorH.<n>` | **color** swatch, "Pick a color" |
+| `Custom HSB color` | `colorHex.<n>`, `colorSat.<n>`, `colorLevel.<n>` | **number**, "Hue value?" / "Saturation value?" / "Bulb level?" |
+| `Custom RGB color` | `colorH.<n>` | **text**, "RGB value?" |
+| `Random color` | none | |
+
+So `colorHex.<n>` is the numeric hue percentage, despite the name, and `colorH.<n>` is the
+hex or RGB string, despite the name. `colorH.<n>` never holds a hue number. Anything that
+reads `colorH` as a number, or `colorHex` as a hex string, has it backwards.
+
+The companion booleans mark which fields are variable-sourced: `uVar.<n>` level,
+`uVar2.<n>` hue, `uVar3.<n>` saturation, `uVar4.<n>` RGB.
+
+What each mode sends at run time, measured on a virtual RGBW light in one rule:
+
+| Mode, as authored | Command RM sends |
+| --- | --- |
+| `Red` (a name) | `setColor([hue:100, saturation:100, level:null])` |
+| `Custom HSB color`, hue 50 sat 60 level 40 | `setColor([hue:50, saturation:60, level:40])` |
+| `Pick a Color`, `#FF00F7` | `setColor([hue:83, saturation:100, level:100])` |
+| `Random color` | `setColor([hue:1, saturation:100, level:null])` |
+
+Custom HSB passes its three values through unchanged. `Pick a Color` converts the hex to HSB and
+**sends a level of 100 even though the action carries no level field**, because the hex encodes a
+brightness the named and random paths have no equivalent for; those two send `level: null`. An
+engine that treats all four modes as "colour without a level" will dim or brighten a bulb that RM
+would not touch. `Random color` picks a fresh hue per run at full saturation; the hue above is one
+sample and is not a constant.
+
+The table below lists the keys RM offers as *inputs*. On the `Custom RGB color` path RM also
+derives and stores the full HSV conversion at commit time, so a saved rule carries the input and
+three computed values. Authoring `#03000D` stores:
+
+    colorH     "#03000D"   the input
+    colorHex   "70"        hue, derived
+    colorSat   "100"       saturation, derived
+    colorLevel "5"         level, derived
+
+RGB(3,0,13) converts to hue 70 on the 0-100 scale, saturation 100, and value 13/255 = 5.1 per
+cent. Every stored number matches the arithmetic. The action then sends
+`setColor([hue:70, saturation:100, level:5])`, so the derived level **is** part of the command.
+
+A stale `colorLevel` cannot survive on this path: an action authored with a level of 77 under a
+named colour and then switched to `Custom RGB color` came out holding 5, RM having overwritten it
+at commit. A `colorLevel` found beside a `colorH` is a derived value, never a leftover.
+
+**What RM renders is the input, not the command.** The rendered text for this mode shows the RGB
+value and no level, while the action computes, stores and sends one. The same holds for
+`Pick a Color`, which sends `level: 100` with no level field displayed. Any method that reads
+RM's own rendering to decide what an action does will under-read every derived value on the
+colour modes. **[strong]**, from one RGB value on one hub and one firmware; the exact arithmetic
+match is the reason for treating it as a formula rather than a coincidence.
+
+### 7.5 A named colour is stored as a name, and resolves on the 0-100 hue scale
+
+A colour chosen from the wizard's list is stored in `color.<n>` as the name itself:
+
+| Setting | Value |
+| --- | --- |
+| `actType.<n>` | `dimmerActs` |
+| `actSubType.<n>` | `getSetColor` |
+| `bulbs.<n>` | `{deviceId: label}` |
+| `color.<n>` | the colour name, e.g. `"Red"` |
+
+`color.<n>` always holds the mode; see 7.3 for what a non-name mode stores alongside it. RM
+resolves the name at run time. Measured on a virtual RGBW light by running one action per name
+and reading the device's own command events:
+
+| Name | Command sent |
+| --- | --- |
+| Soft White | `setColor([hue:11, saturation:30, level:null])` |
+| White | `setColor([hue:11, saturation:0, level:null])` |
+| Daylight | `setColor([hue:11, saturation:10, level:null])` |
+| Warm White | `setColor([hue:11, saturation:20, level:null])` |
+| Red | `setColor([hue:100, saturation:100, level:null])` |
+| Green | `setColor([hue:33, saturation:100, level:null])` |
+| Blue | `setColor([hue:66, saturation:100, level:null])` |
+| Yellow | `setColor([hue:16, saturation:100, level:null])` |
+| Orange | `setColor([hue:11, saturation:100, level:null])` |
+| Purple | `setColor([hue:83, saturation:100, level:null])` |
+| Pink | `setColor([hue:97, saturation:25, level:null])` |
+
+Hue is Hubitat's 0-100 scale, not degrees, so Red is 100 rather than 0. The four whites are all
+hue 11 and differ only by saturation, so they are desaturated orange, not colour temperatures.
+`level` is passed as `null` when the action carries no level, rather than omitted or defaulted
+to 100. The device emits a `colorName` event after the command, and that name is the driver's
+own, not RM's: `Pink` comes back as `Red`, and hue 83 comes back as `Magenta`.
+
+Method note: all twelve commands landed in the same second, so they were mapped to actions by
+ascending event id. That ordering was checked, not assumed: Red and Green reproduce the values
+from a separate two-action run. **[strong]**
+
+### 7.1 Metering a multi-device action
+
+An action that targets several devices can space its commands rather than sending them
+together. Two settings carry it:
+
+| Setting | Value |
+| --- | --- |
+| `meter.<n>` | `"true"` or `"false"`, stored as a string |
+| `meterMillis.<n>` | milliseconds between each device, stored as a string |
+
+The UI labels these "Meter?" and "Meter milliseconds", and the rendered action text gains a
+`meter <N> ms` suffix. With metering on, RM dispatches the command to device *k* at
+`(k - 1) x meterMillis`. It changes only when each command is sent, not how long a device
+takes to return, so it caps how many devices are in flight at once only when the spacing
+exceeds a single device's response time.
+
+An unmetered action still carries `meter.<n> = "false"` with an empty `meterMillis.<n>`, so
+the presence of either key says nothing on its own. Read the value. **[strong]**
 
 ---
 
@@ -782,6 +967,37 @@ problem. They are not; `putAt` coerces them. The real hazard is `contains`, `in`
 the failure this document warns about elsewhere.
 
 ---
+
+### RM's rendered page is lossy where its stored string is not
+
+A condition comparing with `<` is stored complete:
+
+    Illuminance of _ Average External Illuminance(<span style='color:black'>9755</span>) is < 200
+
+but Rule Machine's own config page displays it as "... is", with the operator and the threshold
+gone. RM writes the `<` unescaped, so a browser parses `< 200` as a tag opener and swallows it.
+Measured over 62 rules by the other engine's session: `<` never renders (5 conditions), `<=` never
+renders (4), `>=` always renders, `>` renders 5 of 6 with one case unexplained. A bare `>` is not a
+tag opener, which is the mechanism confirming itself.
+
+Two consequences. Read rule **state**, not the rendered page: `capabstrue` / `capabsfalse` hold the
+intact string. And a tag-stripper of the form `<[^>]*>` is safe here precisely because it requires a
+closing `>`, so it leaves a trailing `< 200` alone; a greedy or open-ended one would not.
+
+More generally, this is the same lesson as 7.3 from the other direction. What RM renders is neither
+the whole command nor, here, the whole condition. The stored data is the better source in both
+cases. **[strong]**
+
+### The white colour names are not colour temperatures
+
+`White`, `Daylight`, `Warm White` and `Soft White` read like colour temperatures, and any
+reasonable engine would route them to `setColorTemperature`. RM does not. All four resolve to
+**hue 11** and differ only by saturation (0, 10, 20, 30), so RM issues `setColor` with a
+desaturated orange. Measured; see 7.5.
+
+This is the shape of trap worth watching for generally: a stored value whose *name* implies one
+command family while RM uses another. Nothing in the settings marks the difference, so it
+produces a wrong output silently, on a device that still responds normally. **[strong]**
 
 ## 10. What the data cannot tell you
 
