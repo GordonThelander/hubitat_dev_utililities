@@ -37,6 +37,9 @@ unchanged.
 - Branches can reconverge through a `branchMerge` node.
 - Device references are numeric IDs in type-specific configuration arrays.
 - A `runRule` action stores the target installed-app ID in `config.appId`.
+- Since platform 2.5.2.135, a `repeatAction` action nests a whole action under `config.action` and a
+  condition group under `config.stopWhen`; the graph `version` did not change (see
+  `observed_graph_format.md`).
 
 These are observations, not a public Hubitat contract.
 

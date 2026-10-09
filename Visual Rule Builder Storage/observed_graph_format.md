@@ -117,6 +117,37 @@ Observed actions:
 
 Only `turnOn` occurred in both fixtures. The remaining types occurred once.
 
+#### Repeated action (platform 2.5.2.135)
+
+Hubitat 2.5.2.135 added a repeated action. It is not a new node kind: it is an `action` node of
+type `repeatAction` whose configuration holds a complete action and a complete condition group.
+Observed once, on 2.5.2.135, in a rule built in the builder UI (device ids invented):
+
+```json
+{"id": "repeatAction", "kind": "action", "type": "repeatAction",
+ "config": {
+   "action": {"type": "turnOn", "config": {"switches": [101]}},
+   "hours": 0, "minutes": 2, "seconds": 5,
+   "stopWhen": {"type": "all",
+     "conditions": [{"id": "stop-condition-1", "type": "motionCondition",
+                     "config": {"motionSensors": [102], "motionSensorState": "Motion is active"}}]}}}
+```
+
+- It wraps exactly one action and repeats it on an interval until `stopWhen` holds. It is a
+  repeat-until, not a count loop and not an iteration over a list of devices. **[observed-1]**
+- `config.action` has the same shape as an action node's `type` and `config`; `config.stopWhen`
+  has the same shape as a decision node's configuration (`type` as AND/OR, `conditions`).
+  **[observed-1]**
+- Device ids therefore sit one level deeper than in any earlier node. A reader that collects
+  device ids from a node's top-level `config` only will miss both the repeated action's devices
+  and the stop condition's. **[observed-1]**
+- The rule app subscribes to the stop condition's device, so a reader that infers roles from
+  subscriptions sees it as a trigger. The graph says it is only tested. **[observed-1]**
+- The graph `version` stayed `1`, so the version field cannot tell a reader that this shape may
+  be present. **[observed-1]**
+- Rules saved before 2.5.2.135 read back unchanged on it: same nodes, edges and version.
+  **[observed-1]**
+
 ## Edges
 
 Every observed edge had:
