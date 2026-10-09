@@ -1898,18 +1898,18 @@ on/off action does once a device is chosen.
 **Counted on this hub 2026-10-07, every rule read:** 245 `optSwitch`, 186 `trackSwitch`, 49
 `useLastDev` rows. (An earlier count of 249 / 190 / 44 predates rules being added and removed,
 including five probe rules; prefer the dated figure.) **Of those 480 rows, exactly one is
-`true`:** rule 509 `_System Start` action 16, a `getOnOffSwitch` with `optSwitch.16 = true`.
+`true`:** rule 509 `_Startup Tasks` action 16, a `getOnOffSwitch` with `optSwitch.16 = true`.
 
 Rule Machine surfaces the qualifier in its own rendered text, so a reader comparing against the
 page can see it:
 
 ```
-Off: _Restart (Command only switches that are on)      optSwitch true
+Off: _Reset Devices (Command only switches that are on)      optSwitch true
 On: Wake Speakers                                optSwitch absent
 ```
 
 `trackSwitch` and `useLastDev` are present on 235 rows between them and `true` on none. That says
-Gordon has never switched them on, which is weaker than saying Rule Machine cannot: the behaviour
+they have never been switched on on this hub, which is weaker than saying Rule Machine cannot: the behaviour
 when they are on remains unobserved here.
 
 **What readers do with them, from Automation Map 2.4.14.** The decoder publishes each only when
@@ -1971,7 +1971,7 @@ creates a new app id. **Restore** may replace the app matching the **source** id
 file. Reference: `https://community.hubitat.com/t/restoring-backups-of-individual-rules/90548`.
 
 The specimen file carries `appData` and `appReplacements` both keyed `541`, and app 541 is a live
-rule on this hub (`_HAI Complex Regression Gauntlet (RM Export Source)`). **A Restore performed where
+rule on this hub (`_Example Complex Rule (Export Source)`). **A Restore performed where
 an Import was intended therefore overwrites a working rule with the file's contents.** This is the
 highest-severity hazard in the reverse direction, above the device-binding hazard in section 15.
 
