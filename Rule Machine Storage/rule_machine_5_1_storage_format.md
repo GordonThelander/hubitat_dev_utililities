@@ -12,6 +12,10 @@ Required Expression, free-text interpolation). That section rests on a handful o
 deliberately-constructed fixtures on one hub, not a corpus survey - its evidence markers are
 correspondingly weaker than sections 1-11's, and should be read as such.
 
+**Updated 2026-10-09.** Re-checked on firmware 2.5.2.134, where Automation Map's scan decoded every
+Rule-5.1 rule with nothing unreadable. Rule numbers, rule names, device names and variable names from
+the hub the samples came from are replaced with invented ones; the stored shapes are unchanged.
+
 **Updated 2026-09-18.** Cross-checked against the community Hubitat Local MCP Server's
 source (kingpanther13/Hubitat-local-MCP-server), which drives the same rules through the
 wizard rather than reading them, and re-verified on a C-8 running 2.5.1.183 across 66
@@ -29,6 +33,23 @@ still uses).
 undocumented fields. Retain what you do not recognise, flag it, and refuse to guess. Section
 9.1 exists because guessing what one field meant produced 28 confident and entirely
 fictional relationships on a 38-rule hub.
+
+### Sections
+
+Section numbers are identifiers, cited from code comments and other documents, so they are never
+renumbered. Some subsections were therefore added out of numeric order, and 6.2 and 6.3 do not
+exist. In document order:
+
+- 1 Scope and warnings - 2 Where the data lives - 3 The shape of a rule (3.1, 3.2) - 4 Execution order
+- 5 Conditions and expressions: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6 (5.6.1), 5.7
+- 6 Separating triggers from conditions: 6.1, 6.4
+- 7 Action parameters by family: 7.4, 7.2, 7.3, 7.5, 7.1, 7.6, 7.7 (7.7.1)
+- 8 Acting on other rules - 9 Traps: 9.1 to 9.7 - 10 What the data cannot tell you: 10.1 to 10.3
+- 11 Finding rules in the first place: 11.1 to 11.4 - 12 Worked example - 13 Hub Variables: 13.1 to 13.8
+- 14 Facts held by the community MCP Rule Server - 15 Native export and import (15.1, 15.2)
+- 16 `type` is not a format discriminator - 17 Waits, measured on the hub: 17.1 to 17.5
+- 18 More fields whose names mislead: 18.1 to 18.4 - 19 Message reads two device keys
+- 20 Trigger capability labels are not stable strings
 
 ---
 
@@ -88,7 +109,7 @@ section 9.1 both came out of corpus queries, not from reading rules individually
 **4. Building a decoder as the test.** The real validation was implementing the format in a
 working app that renders each rule as a flowchart, then comparing every flowchart against
 its rule page. A misreading is not subtle in that setup: it produces a visibly wrong rule.
-Three of the five traps in section 9 were found this way rather than by inspection,
+Three of the five traps section 9 first held (it now holds seven) were found this way rather than by inspection,
 including the `rule` field, which produced 28 confident and entirely fictional relationships
 before anyone noticed.
 
@@ -263,7 +284,7 @@ to `actSubType` costs one line and removes a whole class of failure.
 ## 4. Execution order
 
 **Settings key order means nothing.** `appSettings` is neither display order nor numeric
-order: rule 1809 returns `actType.38`, `actType.23`, `actType.61`, `actType.63` before any
+order: rule 505 returns `actType.38`, `actType.23`, `actType.61`, `actType.63` before any
 `actSubType.<n>` key at all. The compiled state's `actionList` is the only display-ordered
 sequence the hub exposes, and it lists action numbers as strings. **[strong]**
 
@@ -291,7 +312,7 @@ split between them is only whether the condition currently evaluates true:
 
     capabsfalse["7"]  = "Time between Sunset-15 minutes(18:08) and 21:30"
     capabsfalse["12"] = "Temperature of _ Average External Temperature(20.2) is <= 15.0"
-    capabstrue["1"]   = "Theatre Room Motion Sensor motion reports active"
+    capabstrue["1"]   = "Lounge Motion Sensor motion reports active"
 
 Merge both maps to get the full set. Do not read anything into which map a condition landed
 in beyond its truth at the moment you fetched.
@@ -318,7 +339,7 @@ carries no grouping of its own** for the expressions examined. **[strong]**
 **Correction, 2026-09-18.** An earlier version concluded from that flatness that grouping is
 not stored at all, and listed parentheses as not examined. Grouping has its own key.
 `parens` sits beside `eval`, in both `appState` and the compiled state, keyed by the same
-branch numbers: rule 1809 returns `parens = {"0": 0, "11": 0, "12": 0, ...}`. Every rule on
+branch numbers: rule 505 returns `parens = {"0": 0, "11": 0, "12": 0, ...}`. Every rule on
 this hub returns zero for every branch, because none of them groups its conditions, so the
 encoding of a non-zero value is **[unknown]** here. That the hub authors grouping at all is
 confirmed by the MCP server's source, whose wizard writer opens a sub-expression with the
@@ -378,9 +399,11 @@ alphabetical order would place it. **[single]** The remaining fixes are to group
 alternatives in brackets, `Mode AND (Evening OR Morning) AND PB`, or to move the gate leftmost so a
 false gate stops the evaluation before any OR is reached.
 
-Not examined at all, and required before anyone writes an evaluator: explicit grouping or
-parentheses, NOT, whether `eval[n]` can reference another expression rather than a bare
-condition, and any operators beyond AND and OR. **[unknown]**
+Still open, and required before anyone writes an evaluator: how a non-zero `parens` entry
+encodes grouping (the key itself is established above, but every branch on this hub is zero),
+how a per-condition `not<n>` and an `XOR` interact with the early stop (the vocabulary is known
+only from the MCP server's source, above), and whether `eval[n]` can reference another expression
+rather than a bare condition. **[unknown]**
 
 For reconstructing and displaying a rule, reproduce the stored sequence as it stands and let
 the reader apply their own understanding, which is what Rule Machine's own page effectively
@@ -391,7 +414,7 @@ condition numbers it involves, with duplicates, so deduplicate if you use it.
 
 **`eval` keys above 0 do not follow `actionList` order.** Do not pair the nth `eval` entry with
 the nth conditional action; it is wrong and the failure is silent, because both sequences are
-plausible and a mismatched pair still renders. Live counter-example, rule 2329, whose action
+plausible and a mismatched pair still renders. Live counter-example, rule 520, whose action
 order is IF, ELSE-IF, END-IF, WAIT: **[single]**
 
     eval["1"] = [8, "OR", 16]              the WAIT   (fourth conditional in action order)
@@ -410,7 +433,7 @@ no tool should present them as condition state. The rule's own page computes tru
 time; the stored state does not carry it in these keys. **[strong]**
 
 A Private Boolean test inside a Required Expression is an **ordinary numbered condition** in
-`eval["0"]` and `predCapabs`, not a special case. Live sample, rule 2325: **[single]**
+`eval["0"]` and `predCapabs`, not a special case. Live sample, rule 518: **[single]**
 
     eval["0"]   = [5, "AND", 7, "OR", "10", "AND", 15]
                    Mode      Evening   Morning     PrivateBoolean
@@ -453,7 +476,7 @@ condition in words. They matter if you want the raw values rather than the prose
 the hub's own answer to "which conditions does anything evaluate", which is the question
 section 9.1 and Automation Map's UNUSED tagging otherwise answer by inspection.
 
-**Do not use them for that without further work.** On rule 1809 `unusedConds` is
+**Do not use them for that without further work.** On rule 505 `unusedConds` is
 `["44", "55", "48", "38", "51"]`, yet `38` and `44` are both named in that rule's Required
 Expression (`eval["0"] = [38, "AND", "44"]`) and in `predCapabs`. Either the lists mean
 something narrower than their names suggest, or they are stale. Present on 45 of 66 rules.
@@ -474,9 +497,13 @@ The condition and trigger sides use the same asymmetry as `tDev`/`rDev_`: **[str
 | `AlltDev-<n>` | Wait for Events row | the same qualifier again, dash-indexed with the rest of that family |
 | `stays<n>`, `SHours<n>`, `SMins<n>`, `SSecs<n>` | trigger | "and stays" duration |
 | `disableT<n>` | trigger | one trigger disabled in place |
-| `isCondTrig<n>`, `condTrig<n>` | trigger | a condition attached to one trigger row |
+| `isCondTrig.<n>`, `condTrig.<n>` | trigger | a condition attached to one trigger row. **Dotted**, unlike every other trigger key: rule 541 stores `isCondTrig.<n> = true` with `condTrig.<n>` = 1, 3, 5, 7 on triggers 2, 4, 6, 8. An earlier revision wrote them undotted |
+| `ButtontDev<n>` | trigger | the button **number** on a Button trigger, not a device (rule 503 trigger 4: button 1). Read by the decoder; not separately probed |
+| `time<n>` | trigger | Certain Time selector: `A specific time` (value in `atTime<n>`), `Sunrise` or `Sunset` (offset in `atSunriseOffset<n>` / `atSunsetOffset<n>`); see section 20 for rule 502's `time26`. Read by the decoder |
+| `whichPeriod<n>`, `everyNSecs<n>` | trigger | Periodic Schedule period and interval (rules 540/541/542: `Seconds`, every 10). Read by the decoder; not separately probed |
+| `cronString<n>` | trigger | Periodic Schedule, carried raw beside `startingTime`, `selectedHours` and the other schedule fields. Read by the decoder; not separately probed, no value seen in the 2026-10-07 scan |
 
-Comparator values are stored as the glyph, not ASCII: `RelrDev_2` on rule 2990 reads `≠`,
+Comparator values are stored as the glyph, not ASCII: `RelrDev_2` on rule 533 reads `≠`,
 never `!=`. String comparisons are stored as asterisk-wrapped literals, `*changed*` and
 `*contains*`; there is no "does not contain", which is `not<n>` plus `*contains*`.
 **[strong]** For the device-relative shape the MCP server's source reports that `state_<n>`
@@ -486,11 +513,11 @@ carries the offset rather than a comparison value, so `state_<n>` is not always 
 Time values are polymorphic. `atTime<n>` holds `21:05` for a daily trigger, and a full ISO
 datetime for a one-shot dated trigger. **[external, for the ISO form]** A time range writes
 `starting<n>` / `ending<n>` as a mode word such as `A specific time`, with the value in
-`startingA<n>` / `endingA<n>` (`06:00` on rule 2195). **[strong]** Mode conditions store the
+`startingA<n>` / `endingA<n>` (`06:00` on rule 513). **[strong]** Mode conditions store the
 mode **id** in `modes<n>` (`["2"]`), not the mode name; the MCP server reports the trigger
 side writes `modesX<n>`. **[strong]** / **[external]**
 
-A conditional trigger (`isCondTrig<n>` with `condTrig<n>`) is evaluated **after** the trigger
+A conditional trigger (`isCondTrig.<n>` with `condTrig.<n>`) is evaluated **after** the trigger
 event fires, which is the structural opposite of a Required Expression: the expression decides
 whether the subscription exists at all, the conditional trigger filters an event that already
 arrived. **[external]**
@@ -502,7 +529,7 @@ is the authority for **what an expression references**, and it is not an authori
 expressions the rule runs**. RM keeps an entry for every expression built in the editor, whether it
 ended up attached to anything or not.
 
-Rule 2076 carries nine entries and two live ones. `eval["7"] = ["71"]` is orphaned, and reading
+Rule 508 carries nine entries and two live ones. `eval["7"] = ["71"]` is orphaned, and reading
 `eval` as the live set makes condition 71's 06:00-21:00 window look referenced when the rule
 renders no IF at all.
 
@@ -511,17 +538,17 @@ from `state.actions` (an IF or Wait for Expression carries its id as the action'
 other entry is editor residue, in the same family as 7.7 kind 4: it exists, it is well-formed, and
 nothing runs it.
 
-Found by the other engine's session while mechanising a check; the orphaned entry announced itself
+Found by HAI's development work while mechanising a check; the orphaned entry announced itself
 as an arithmetic impossibility rather than as a wrong answer. **[strong]**
 
-#### 5.6.1 Two cautions on counting conditions
+#### 5.6.1 Four cautions on counting conditions
 
 **A time condition does carry `rCapab_<n>`.** Both `Between two times` and `Time of day` appear
-there like any other condition type: 2076 holds `rCapab_57`, `rCapab_60` and `rCapab_71` all as
-`Between two times`, and 1809 holds `rCapab_55` the same way. A claim that time conditions have no
+there like any other condition type: 508 holds `rCapab_57`, `rCapab_60` and `rCapab_71` all as
+`Between two times`, and 505 holds `rCapab_55` the same way. A claim that time conditions have no
 `rCapab_` key was tested against both rules and does not hold.
 
-**`rCapab_<n>` can be an empty string.** 1809 carries `rCapab_45 = ""` and `rCapab_3 = ""`. A
+**`rCapab_<n>` can be an empty string.** 505 carries `rCapab_45 = ""` and `rCapab_3 = ""`. A
 "defined conditions" set built by filtering `rCapab_` entries on truthiness silently drops those.
 Test for the key's presence, not its truthiness - the same distinction as `AllrDev_<n>`, where
 empty means **any** rather than unset. **[strong]**
@@ -529,18 +556,39 @@ empty means **any** rather than unset. **[strong]**
 **`rCapab_<n>` is what makes index `n` a condition, and other keys outlive it.** A companion key can
 sit at an index that holds no condition at all:
 
-    2100   days45 = ["Sunday"]        rCapab_45 absent
+    510   days45 = ["Sunday"]        rCapab_45 absent
     2699   atSunsetOffset1 = '-15'    rCapab_1  absent
 
 Both are pickers left behind by a deleted condition. So the question for any indexed key is not
 whether it holds a value but whether `rCapab_<n>` exists for that index. Counting day pickers or
 offsets as evidence of a condition inflates the defined set.
 
-**`eval` can name indices that no longer exist.** On 2076 the expressions reference 1, 2, 5, 22 and
+**`eval` can name indices that no longer exist.** On 508 the expressions reference 1, 2, 5, 22 and
 66, and **none of those has an `rCapab_` key**: they are conditions that were deleted, still named
 by the orphaned expressions of 5.6. A live expression naming a missing condition would mean the
-rule evaluates something Rule Machine cannot show; checked across 62 rules by the other engine's
-session, no live expression does. Orphaned ones do it routinely and harmlessly. **[strong]**
+rule evaluates something Rule Machine cannot show; checked across 62 rules during HAI's
+development work, no live expression does. Orphaned ones do it routinely and harmlessly. **[strong]**
+### 5.7 `*changed*` is a comparator on some families and the *value* on others
+
+`tstate<n> = "*changed*"` appears in two shapes, and which one you get depends on the capability
+family. Counted across every rule on 2026-10-07: **14 triggers store it, 4 of them with no
+comparator key at all.**
+
+| Shape | Families seen here | Count |
+| --- | --- | --- |
+| `tstate<n> = "*changed*"` **with** `ReltDev<n>` | Custom Attribute, Variable | 10 |
+| `tstate<n> = "*changed*"` **without** `ReltDev<n>` | Switch, Presence | 4 |
+
+The four without a comparator: rule 525 trigger 1 (Switch), 527 triggers 9 and 10 (Presence and
+Switch), 528 trigger 9 (Presence).
+
+**Read as a value this becomes "is the text `*changed*`", which never fires.** On a device-state
+family it is not a value at all; it means any change of that attribute. The absence of `ReltDev<n>`
+is the signal, not a missing field to default.
+
+This is why rule 528 would have copied into a rule that never ran even after its phantom trigger
+(18.3) was removed: the phantom was the loud defect, this is the quiet one underneath it.
+
 ## 6. Separating triggers from conditions
 
 This is the most useful distinction in the whole format and the basis for classifying what
@@ -551,8 +599,8 @@ role a device plays in a rule.
 | `tDev<n>` | devices that **trigger** condition n |
 | `rDev_<n>` | devices used in condition n as a **condition** |
 
-    tDev1   -> Theatre Room Motion Sensor      (the trigger, motion becomes active)
-    rDev_2  -> Theatre Room Motion Sensor      (the same device, as a condition)
+    tDev1   -> Lounge Motion Sensor      (the trigger, motion becomes active)
+    rDev_2  -> Lounge Motion Sensor      (the same device, as a condition)
     rDev_12 -> _ Average External Temperature  (a temperature gate)
 
 The same physical device appears as both, and means different things each time. A tool that
@@ -568,17 +616,17 @@ keys on the setting prefix can.
 
 A Wait for Events action does not store its event rows per action. They live in rule-scope
 settings whose index is separated by a **dash**: `tCapab-<n>`, `tDev-<n>`, `tstate-<n>`,
-`stays-<n>`, `SHours-<n>`. Rule 1230 carries `tCapab-5 = Certain Time (and optional date)`,
+`stays-<n>`, `SHours-<n>`. Rule 502 carries `tCapab-5 = Certain Time (and optional date)`,
 `tDev-4`, `tstate-4 = closed`. A device in `tDev-4` is a wait target; a device in `tDev4`
 is a trigger. Read the dash. **[strong]**
 
 A Wait for Events carries its own all-or-any qualifier per row in `AlltDev-<n>`, and **its rows are
-OR'd together**. Rule 1230 holds `tCapab-4 = Contact` with five doors, `tstate-4 = closed` and
+OR'd together**. Rule 502 holds `tCapab-4 = Contact` with five doors, `tstate-4 = closed` and
 `AlltDev-4 = "true"` alongside `tCapab-5 = Certain Time (and optional date)` with `atTime-5 =
 02:00`, and renders as "... all contact is closed / OR When time is 02:00". So "all" is within a
 row and "or" is between rows. A multi-device threshold puts the qualifier where the operator would
-go, rendering "Back Garden Left, Back Garden Right(1, 1) all >= 500" rather than "is >= 500".
-Found by the other engine's session and confirmed here against 1230's live settings. **[strong]**
+go, rendering "Path Light Left, Path Light Right(1, 1) all >= 500" rather than "is >= 500".
+Found by HAI's development work and confirmed here against 502's live settings. **[strong]**
 
 Because the keys are rule-scoped rather than per-action, **only one Wait for Events action can
 exist per rule**: a second overwrites the first. The MCP server reports the same limit in
@@ -594,7 +642,7 @@ A trigger on a hub-level event stores only two keys, with a bare index and no da
 | `tstate<n>` | the event name, e.g. `lowMemory`, `severeLoad` |
 
 There is no device, comparator or value. The rule fires on any occurrence of that named event.
-Rule 2100 carries `tCapab12 / tstate12 = lowMemory` and `tCapab47 / tstate47 = severeLoad`.
+Rule 510 carries `tCapab12 / tstate12 = lowMemory` and `tCapab47 / tstate47 = severeLoad`.
 
 The event's payload reaches the actions through the usual tokens. `severeLoad` was observed
 with `%value% = 2.52` and `%text% = "Severe hub CPU load detected"`, so it carries a numeric
@@ -614,7 +662,7 @@ load figure.
 The scale is corroborated by the hub reporting `freeMemoryKB` of 169252 while healthy. The event
 repeats while memory stays low rather than firing once per episode: three occurrences on
 2026-09-20 at 17:10, 17:20 and 17:25. With `isStateChange` true each one is delivered, so a rule
-triggered on it runs every time, which is what rule 2100 relies on when it counts occurrences.
+triggered on it runs every time, which is what rule 510 relies on when it counts occurrences.
 **[strong]**
 
 ## 7. Action parameters by family
@@ -628,13 +676,30 @@ A non-exhaustive list of ones confirmed on a live hub:
 | `getSetColorTemp` | `ct.<n>` device, `ctL.<n>` kelvin, `ctLevel.<n>` level |
 | `getSetVolume` | `volume.<n>` device, `volumeVal.<n>` level |
 | `getMsg` | `msg.<n>` text, plus **two** independent device pickers - see 7.2 |
-| `getDelay` | `delaySecond.<n>`, `delayMin.<n>`, `delayAct.<n>` |
-| `getWaitRule` | condition via the action's `rule` field, `delay` on the action for timeout |
+| `getDelay` | `delayHour.<n>`, `delayMinute.<n>`, `delaySecond.<n>` (long names), or `xVar.<n>` (7.4); `cancelAct.<n>` cancelable, `randomAct.<n>` random |
+| `getWaitRule` | condition via the action's `rule` field; time in the action object's `delay` (`h:mm:ss`), mirrored in `delayHor.<n>` / `delayMin.<n>` / `delaySec.<n>`; `durChoice.<n>` says whether that time is a duration or a timeout (17.1) |
 | `getIfThen`, `getElseIf` | condition via the action's `rule` field |
-| `getDefinedAction` | `devices.<n>` device list, `myCapab.<n>` capability, `cCmd.<n>` command, `meter.<n>`, `meterMillis.<n>` |
+| `getDefinedAction` | `devices.<n>` device list, `myCapab.<n>` capability, `cCmd.<n>` command, `meter.<n>`, `meterMillis.<n>`, `useLastDev.<n>` (14) |
+| `getSetDimmer` | `dimA.<n>` devices, `dimLA.<n>` level, `dimRA.<n>` fade seconds (rule 545 renders `Dim: Hall Light: 67 --> fade: 2`) |
+| `getAdjustDimmer` | `dimA.<n>` devices, `dimAdj.<n>` amount, `dimAdjR.<n>` `true` for down (rule 534: 10, up). Read by the decoder; not separately probed |
+| `getChime` | `chime.<n>` devices, `chimePlayStop.<n>` (`Play Sound` or a stop), `chimePlaySound.<n>` sound number (rule 512: sound 9); see 18.2 for `siren.<n>` |
+| `getSetMode` | `mode.<n>`, a mode **id** like every mode setting (rule 527: `6` is Guest) |
+| `getCapture` | `capture.<n>` devices, nothing else (rule 546). `getRestore` stores nothing under its own index |
+| `getLogMsg` | `logmsg.<n>` text; no level is stored |
+| `getHTTPPost` | `httper.<n>` URL, `httpPostBody.<n>` body, `httpPostType.<n>` content type (rules 510, 513) |
+| `getSetVariable` | Boolean target: `valBool.<n>` (rule 543). Number and String targets: 13.1. Read by the decoder; not separately probed |
 
 Most actions also carry `delayAct.<n>`, which is `none` unless the individual action has its
-own delay.
+own delay. That per-action delay uses the **short** names, `delayHor.<n>` / `delayMin.<n>` /
+`delaySec.<n>`, plus `cancelAct.<n>` (rule 540: `delaySec.15 = 4` on a `getOnOffSwitch`,
+`delaySec.11 = 2` on a `getDefinedAction`, both `delayAct = hrs:min:sec`). Only `getDelay` uses
+the long `delayHour` / `delayMinute` / `delaySecond` spelling. Counted from the
+2026-10-07T08:57:53Z scan fixture, wherever its raw settings name the subtype at that index:
+long names only ever beside `getDelay`, short names only beside waits and per-action delays. Reading one spelling for the other finds no time at all.
+
+The `getAdjustDimmer` through `getSetVariable` rows above were added 2026-10-07 from Automation
+Map 2.4.14's decoder (`hamDetailActionOperands`), with the values its 2026-10-07 scan published
+for the named rules; none was separately probed beyond what the decoder comment records.
 
 The reliable general approach is: for action `n`, collect every setting whose name ends in
 `.<n>`. That finds the parameters without needing a table for every action type, which
@@ -661,7 +726,7 @@ both:
 | --- | --- |
 | `note.<n>` | notification devices |
 | `speakDevice.<n>` | speech devices |
-| `speakVolume.<n>` | volume for the speech devices, may be blank |
+| `speakVolume.<n>` | volume for the speech devices, may be blank, and can be left over from a removed speaker (section 19) |
 
 Reading only `note.<n>` loses every spoken announcement while the action still decodes as a
 message, so the failure is silent. Found across a 62-rule corpus where nine messages decoded
@@ -673,7 +738,7 @@ to no target at all; a four-rule sample showed none of them. **[strong]**
 
 **Corrected 2026-09-24.** This section previously said `colorH.<n>` carries a hue percentage and
 holds a hex string only for a custom colour. That was wrong in both halves. It was contradicted
-by the other engine's reading of 62 live rules and then settled by walking RM's own action
+by HAI's reading of 62 live rules and then settled by walking RM's own action
 wizard and reading the input definitions it emits.
 
 `color.<n>` holds the picker's mode, and the mode decides which other keys exist:
@@ -789,6 +854,62 @@ The UI labels these "Meter?" and "Meter milliseconds", and the rendered action t
 takes to return, so it caps how many devices are in flight at once only when the spacing
 exceeds a single device's response time.
 
+**Trap, measured 2026-10-07.** `meter.<n>` is the toggle and `meterMillis.<n>` is the interval,
+despite the names reading the other way round. Writing the interval into `meter.<n>` (for example
+`meter.1 = "3000"` through a raw settings write) produces a setting Rule Machine ignores entirely:
+the value is not `"true"`, so metering is off and there is no `meterMillis.<n>` at all. The action
+runs unmetered while storage looks configured, and the rendered text drops its `meter <N> ms`
+suffix, which is how to tell. Probe rule 552 carries exactly that inert `meter.1 = "3000"` as the
+worked example. Both keys are set through the action wizard only; a write aimed at `mainPage` is
+refused as not an input on that page.
+
+**What the form allows, and what the runtime delivers.** Read from the live input on `doActPage`:
+`settings[meterMillis.<n>]` is `type=number` with `min="0"`, no `max` and `step="1"`, and
+`meter.<n>` is declared `bool`. So the wizard permits zero and upwards in single milliseconds, with
+no floor.
+
+The platform cannot honour the small end of that range. Measured 2026-10-07 on probe rule 554 with
+`meterMillis = 1`, three devices and a marker action, run directly so no trigger sat in the timing
+path:
+
+```
+device 1   t+0.000s
+device 2   t+0.014s      14 ms
+device 3   t+0.027s      13 ms
+marker     t+0.043s      16 ms
+```
+
+A setting of 1 ms produces roughly 14 ms. The value is accepted and silently rounded up by the
+runtime rather than rejected by the form, so **anything below about 15 ms should be read as "no
+meaningful spacing"** rather than as the number stored.
+
+**The next action waits, and waits one further interval.** Measured on probe 553 at
+`meterMillis = 2000` with three devices:
+
+```
+device 1   t+0.000s
+device 2   t+2.026s
+device 3   t+4.038s
+marker     t+6.056s      the next action
+```
+
+Device *k* at `(k-1) x meterMillis` is correct, but execution does not resume when the last command
+goes out. The next action runs at `k x meterMillis`, one whole interval after the last device. A
+consumer that resumed at the last dispatch would be `n x meterMillis` early. The same relationship
+holds at 1 ms, so it is the rule rather than an artefact of a long interval.
+
+**On the mechanism, and what is not established.** The app's `scheduledJobs` is empty mid-run:
+sampled while devices were still pending at 2000 ms spacing, rule 553 had no scheduled jobs at all.
+Taken alone that argues against a chain of ordinary `runInMillis` timers. But the ~14 ms floor is
+characteristic of exactly those timers, and a path closer to the hardware would land nearer 1 ms.
+The reading consistent with both is an in-execution loop inside a single app execution: nothing is
+registered in the job table because no job is created, and the granularity is JVM-level because it
+is the JVM.
+
+That is the best explanation fitting the measurements, not a proven mechanism. **Rule Machine's
+source cannot settle it from the hub:** it is app type 147, a built-in, and `app/ajax/code?id=147`
+returns `"source": ""` while a user app returns its source in full.
+
 An unmetered action still carries `meter.<n> = "false"` with an empty `meterMillis.<n>`, so
 the presence of either key says nothing on its own. Read the value. **[strong]**
 
@@ -854,7 +975,7 @@ visibility were measured on 2026-09-25, and they fail in different ways.
 | `color.<n>`, `colorLevel.<n>`, `uVar.<n>` | `bulbs.<n>` |
 | `colorH.<n>` or `colorHex`+`colorSat`+`colorLevel` | the mode chosen in `color.<n>` (see 7.3) |
 | `onOff.<n>`, `optSwitch.<n>`, `trackSwitch.<n>`, `delayAct.<n>` | `onOffSwitch.<n>` |
-| `delayHour`/`delayMinute`/`delaySecond` | `delayAct.<n>` = `hrs:min:sec` |
+| `delayHor`/`delayMin`/`delaySec` (short names; a `getDelay` uses the long `delayHour`/`delayMinute`/`delaySecond`, see section 7) | `delayAct.<n>` = `hrs:min:sec` |
 | `xVar.<n>` | `delayAct.<n>` = `variable` |
 | `tstate<n>` | `tCapab<n>` **and** `tDev<n>` |
 | `actionDone` | every required field for the chosen subtype |
@@ -864,7 +985,7 @@ The MCP rule server documents the same thing from its own side: "doActPage's sch
 
 **2. A field revealed by content elsewhere in the rule.** The time and date format pickers appear on
 the rule's *main* page only when some action uses `%time%`, `%now%` or `%date%`. The stored key for
-the first is `timeFormat` (rule 2100 holds `"HH:mm"`). The date picker's key has not been observed,
+the first is `timeFormat` (rule 510 holds `"HH:mm"`). The date picker's key has not been observed,
 because no rule read so far has had one saved. This kind is the nastiest to reason about, because
 the revealing content is in a different action from the revealed setting. **[strong]** for the
 reveal, **[unknown]** for the date key name.
@@ -896,18 +1017,18 @@ companion keys, only one of which applies:
 Change the bound type and the previously-applicable key **retains its old value**. Measured on two
 rules:
 
-    1775  starting5 = 'A specific time'   startingA5 = '06:00'        applies
+    503  starting5 = 'A specific time'   startingA5 = '06:00'        applies
           ending5   = 'Sunrise'           endingA5   = '22:00'        STALE
                                           endSunriseOffset5 = '10'    applies
           renders: "Time between 06:00 and Sunrise+10 minutes"
 
-    2290  starting9 = 'Sunset'            startSunsetOffset9  = ''    applies, empty
+    517  starting9 = 'Sunset'            startSunsetOffset9  = ''    applies, empty
           ending9   = 'Sunrise'           endSunriseOffset9   = ''    applies, empty
                                           startSunriseOffset9 = '15'  STALE
                                           endSunsetOffset9    = '-15' STALE
           renders: "Time between Sunset(18:15) and Sunrise(06:04)", no offset
 
-2290 is the clearer case: **both applicable offset keys are empty and both inapplicable ones hold
+517 is the clearer case: **both applicable offset keys are empty and both inapplicable ones hold
 values**, which is why the rendering shows no offset at all. A reader that takes `endingA5` without
 first reading `ending5` gets 22:00 where Rule Machine means sunrise, and one that takes
 `endSunsetOffset9` gets a 15-minute shift Rule Machine does not apply.
@@ -915,7 +1036,7 @@ first reading `ending5` gets 22:00 where Rule Machine means sunrise, and one tha
 A stale offset also outlives a switch to a **clock** bound, so this is not confined to sun bounds
 swapping bodies:
 
-    2279  starting3 = 'A specific time'   startingA3 = '21:30'        applies
+    515  starting3 = 'A specific time'   startingA3 = '21:30'        applies
           ending3   = 'A specific time'   endingA3   = '06:00'        applies
                                           endSunriseOffset3 = '6'     STALE
           renders: "Time between 21:30 and 06:00", no offset
@@ -923,7 +1044,7 @@ swapping bodies:
 So the rule for this format is: **`starting<n>` / `ending<n>` select which companion key is live, and
 every other companion is noise.** Never read a value key without reading its type key first.
 
-The structure and the first two instances came from the other engine's session; 2279 was found by
+The structure and the first two instances came from HAI's development work; 515 was found by
 mechanising the check and is confirmed here from its stored settings and its own rendering.
 **[strong]**
 
@@ -977,17 +1098,17 @@ user has never seen.
 
 ### Target values
 
-    ruleAct.4    = ["1806"]
-    privateT.31  = ["*","1809"]
+    ruleAct.4    = ["504"]
+    privateT.31  = ["*","505"]
 
-`"*"` means **this rule**. Critically, it can appear **alongside** real targets: `["*","1809"]`
-is Rule Machine's way of storing "set the Private Boolean of this rule *and* of rule 1809".
+`"*"` means **this rule**. Critically, it can appear **alongside** real targets: `["*","505"]`
+is Rule Machine's way of storing "set the Private Boolean of this rule *and* of rule 505".
 Treating the presence of `"*"` as meaning self-only will silently drop genuine cross-rule
 references. **[strong]**
 
 The rule's own numeric id is **not** the same stored form. On 2026-09-15 (firmware 2.5.1.183)
 a throwaway rule was given a Rule Boolean action written with its own id, `privateT.1 =
-["3269"]`. It worked when run, setting the rule's own Private Boolean, but the rule page
+["537"]`. It worked when run, setting the rule's own Private Boolean, but the rule page
 rendered the action as `Rule Boolean False: ''`, with no target name. **[single]** Rule
 Machine's picker evidently offers the rule itself only as `"*"`. A reader should treat an own-id
 target as a self-reference, and a writer should not assume it round-trips through the editor.
@@ -1000,8 +1121,8 @@ Parse each element explicitly rather than stripping non-digits out of the whole 
         else                          -> unknown, record and skip
 
 Stripping non-digits is tempting and shorter, but it silently turns any element you have not
-anticipated into a plausible-looking id. A future sentinel of the form `RM1809` would become
-`1809`, which is a real installed app, and the resulting wrong edge would look entirely
+anticipated into a plausible-looking id. A future sentinel of the form `RM505` would become
+`505`, which is a real installed app, and the resulting wrong edge would look entirely
 credible. Rejecting what you do not recognise is the safer default throughout this format.
 
 `actType.<n> = rulesActs` also covers actions with no target at all, so check `actSubType`
@@ -1073,16 +1194,16 @@ backwards against the rule page in every observed case:
 
 | Rule | Action | Position | `pvTF` | Rule page shows |
 | --- | --- | --- | --- | --- |
-| 1806 | 31 | second | `true` | Rule Boolean **False** |
-| 1806 | 33 | last | `false` | Rule Boolean **True** |
-| 2972 | 7 | sixth | `true` | Rule Boolean **False** |
-| 1999 | 8 | third | `true` | Rule Boolean **False** |
-| 1999 | 7 | last | *(empty)* | Rule Boolean **True** |
+| 504 | 31 | second | `true` | Rule Boolean **False** |
+| 504 | 33 | last | `false` | Rule Boolean **True** |
+| 531 | 7 | sixth | `true` | Rule Boolean **False** |
+| 507 | 8 | third | `true` | Rule Boolean **False** |
+| 507 | 7 | last | *(empty)* | Rule Boolean **True** |
 
-Ordering is not the explanation: every other action of rule 1806 matches its page exactly in
+Ordering is not the explanation: every other action of rule 504 matches its page exactly in
 order. Whatever `pvTF` means, it is not straightforwardly "the value set".
 
-**Settled 2026-08-14.** The last two rows are rule 1999 "Barking", read off its page
+**Settled 2026-08-14.** The last two rows are rule 507 "Dog Alert", read off its page
 directly, and they are the case the first three did not cover: a pair storing `true` and an
 empty string. The page shows **False** then **True**, in that order. So: **[strong]**
 
@@ -1122,9 +1243,10 @@ re-arm it at the end. It is consistent with the inversion above, and it means an
 odd `pvTF` is usually explained by which half of the pair you are looking at. The twelfth
 rule is the hand-built test rule, which holds a single unpaired action.
 
-Not enough to start rendering the value. It does narrow what a confirming test needs to be:
-a single rule page read for a pair whose stored values are `true` and `''`, since the `true`
-/ `false` pair is already covered by rule 1806 in the table above.
+This enumeration was written before the settled finding above, and originally ended by saying it
+was not enough to render the value and that one page read of a `true` / `''` pair would confirm
+it. Rule 507 is that read, so the confirming test is done: render the negation, as stated above.
+Automation Map 2.4.14 publishes `value = !pvTF` on that basis.
 
 **`privateF.<n>` was not observed at all.** All 23 store their target under `privateT.<n>`,
 including the two actions whose `pvTF` is `false`. **[strong]** The alias remains worth
@@ -1140,7 +1262,7 @@ hub's 66 rules, so they are recorded here unverified. **[external]**
 
 An app's label is not clean text. Hubitat appends status markup:
 
-    Theatre Room Light and Fireplace <span style='color:red'>(Required Expression false)</span>
+    Lounge Light and Heater <span style='color:red'>(Required Expression false)</span>
 
 Strip tags. Note the parenthetical text survives stripping, which is usually what you want,
 since it is real information.
@@ -1189,7 +1311,7 @@ the failure this document warns about elsewhere.
 
 ---
 
-### RM's rendered page is lossy where its stored string is not
+### 9.6 RM's rendered page is lossy where its stored string is not
 
 A condition comparing with `<` is stored complete:
 
@@ -1197,7 +1319,7 @@ A condition comparing with `<` is stored complete:
 
 but Rule Machine's own config page displays it as "... is", with the operator and the threshold
 gone. RM writes the `<` unescaped, so a browser parses `< 200` as a tag opener and swallows it.
-Measured over 62 rules by the other engine's session: `<` never renders (5 conditions), `<=` never
+Measured over 62 rules by HAI's development work: `<` never renders (5 conditions), `<=` never
 renders (4), `>=` always renders, `>` renders 5 of 6 with one case unexplained. A bare `>` is not a
 tag opener, which is the mechanism confirming itself.
 
@@ -1209,7 +1331,7 @@ More generally, this is the same lesson as 7.3 from the other direction. What RM
 the whole command nor, here, the whole condition. The stored data is the better source in both
 cases. **[strong]**
 
-### The white colour names are not colour temperatures
+### 9.7 The white colour names are not colour temperatures
 
 `White`, `Daylight`, `Warm White` and `Soft White` read like colour temperatures, and any
 reasonable engine would route them to `setColorTemperature`. RM does not. All four resolve to
@@ -1254,9 +1376,9 @@ question; what remains unproven here is how a rule that IS a function reads back
 | *(empty)* | **Pause** Rules |
 
 Measured on one rule holding both, so engine version, firmware and rule are all held
-constant across the pair. Rule 2972 action 8 stores `pR=true` against a page reading
-"Resume Rules: Back Door Night", and action 6 stores an empty string against "Pause Rules:
-Kettle button".
+constant across the pair. Rule 531 action 8 stores `pR=true` against a page reading
+"Resume Rules: Side Gate Night", and action 6 stores an empty string against "Pause Rules:
+Desk button".
 
 Note that this reads the right way round, unlike `pvTF` in 9.3, which is inverted. Two
 booleans on the same family of actions, stored with opposite polarity. Do not assume one
@@ -1382,9 +1504,9 @@ that still carries the key. Test for the absence of `label` and `name` rather th
 shape of the response, since that holds for both forms.
 
 ```
-GET /installedapp/statusJson/2328  ->  200  {}
-GET /installedapp/statusJson/1838  ->  200  {}
-GET /installedapp/statusJson/2973  ->  200  {"installedApp":{...,"trueLabel":"_Testy Function",...}}
+GET /installedapp/statusJson/519  ->  200  {}
+GET /installedapp/statusJson/506  ->  200  {}
+GET /installedapp/statusJson/532  ->  200  {"installedApp":{...,"trueLabel":"_Example Function",...}}
 ```
 
 The third id is the useful control. It answers with a full body despite never being reached
@@ -1400,7 +1522,7 @@ normal case for a Rule Function. `/hub2/appsList` closes it, and the confirming 
 concrete: **[strong]**
 
 A Rule Function does get its own installed-app id, `type` of `Rule-5.1`, indistinguishable
-in the listing from any other rule. On this hub, `_Testy Function` is installed app 2973. It
+in the listing from any other rule. On this hub, `_Example Function` is installed app 532. It
 appears in `/hub2/appsList` and does not appear in a device-led scan, which is exactly the
 shape the blind spot predicts.
 
@@ -1429,9 +1551,15 @@ position: both are handled defensively as aliases, and neither occurs on this hu
 
 ## 12. Worked example
 
-Rule **Theatre Room Light and Fireplace**, installed app 2325. Its page shows a Required
+Rule **Lounge Light and Heater**, installed app 518. Its page shows a Required
 Expression, a motion trigger, a lamp switched on, an IF that also lights the fireplace when
 it is cold, then a ten-minute wait for motion to stop before turning everything off.
+
+**Since renamed, and since edited.** The rule is now **Den Light and Heater** (the
+2026-10-07T08:57:53Z scan fixture), and its devices are renamed to match. The reading below is
+kept as taken. That scan holds `delayMin.2 = 5`, `durChoice.2 = true`, empty `delayHor.2` and
+`delaySec.2`, and the decoder publishes `waitSeconds 300, useDuration true` for action 2; the
+Required Expression and mode list have also changed. See the correction under the action table.
 
 ### Raw
 
@@ -1453,27 +1581,27 @@ it is cold, then a ten-minute wait for motion to stop before turning everything 
       1: 2
       2: 12
 
-    capabstrue:   1  -> "Theatre Room Motion Sensor motion reports active"
-    capabsfalse:  2  -> "Theatre Room Motion Sensor motion is inactive"
+    capabstrue:   1  -> "Lounge Motion Sensor motion reports active"
+    capabsfalse:  2  -> "Lounge Motion Sensor motion is inactive"
                   5  -> "Mode in [Home, Visitor]"
                   7  -> "Time between Sunset-15 minutes(18:08) and 21:30"
                   10 -> "Time between 06:00 and Sunrise+15 minutes(07:19)"
                   12 -> "Temperature of _ Average External Temperature(20.2) is <= 15.0"
                   15 -> "Private Boolean(true) is true"
 
-    tDev1   -> Theatre Room Motion Sensor
-    rDev_2  -> Theatre Room Motion Sensor
+    tDev1   -> Lounge Motion Sensor
+    rDev_2  -> Lounge Motion Sensor
     rDev_12 -> _ Average External Temperature
 
-    onOffSwitch.6 -> Theatre Room Lamp,             onOff.6 = true
-    onOffSwitch.1 -> Fireplace,                onOff.1 = true
-    onOffSwitch.3 -> Theatre Room Lamp, Fireplace,  onOff.3 = false
+    onOffSwitch.6 -> Lounge Lamp,             onOff.6 = true
+    onOffSwitch.1 -> Heater,                onOff.1 = true
+    onOffSwitch.3 -> Lounge Lamp, Heater,  onOff.3 = false
     delayAct.2 = hrs:min:sec, delayMin.2 = 10
     pvTF.7 = true
 
 ### Decoded
 
-**Trigger.** `tDev1` names the trigger device, and condition 1 renders it: Theatre Room Motion
+**Trigger.** `tDev1` names the trigger device, and condition 1 renders it: Lounge Motion
 Sensor becomes active.
 
 **Required Expression.** `hasPredicate` is true, so `eval[0]` applies:
@@ -1487,18 +1615,26 @@ string `"10"`. Any parser that assumes a consistent element type fails here.
 
 | # | Action | Resolution |
 | --- | --- | --- |
-| 7 | `getSetPrivateBoolean` | `pvTF.7 = true`, value not shown, see 9.3 |
-| 6 | `getOnOffSwitch` | `Theatre Room Lamp`, `onOff.6 = true`, so on |
+| 7 | `getSetPrivateBoolean` | `pvTF.7 = true`, so Rule Boolean **False** (9.3, inverted) |
+| 6 | `getOnOffSwitch` | `Lounge Lamp`, `onOff.6 = true`, so on |
 | 4 | `getIfThen` | `rule: 2` to `eval[2] = 12` to condition 12, external temperature <= 15 |
-| 1 | `getOnOffSwitch` | `Fireplace`, `onOff.1 = true`, so on |
+| 1 | `getOnOffSwitch` | `Heater`, `onOff.1 = true`, so on |
 | 5 | `getEndIf` | |
-| 2 | `getWaitRule` | `rule: 1` to `eval[1] = 2` to condition 2, motion inactive, timeout 0:10:00 |
+| 2 | `getWaitRule` | `rule: 1` to `eval[1] = 2` to condition 2, motion inactive, held for 0:10:00 (Use Duration, see below) |
 | 8 | `getSetPrivateBoolean` | |
-| 3 | `getOnOffSwitch` | `Theatre Room Lamp, Fireplace`, `onOff.3 = false`, so off |
+| 3 | `getOnOffSwitch` | `Lounge Lamp, Heater`, `onOff.3 = false`, so off |
 
-Reading out: on motion, set the Private Boolean, turn the lamp on, and if it is 15 degrees
-or colder outside also light the fireplace; then wait up to ten minutes for motion to stop,
-reset the Private Boolean, and turn both off.
+Reading out: on motion, set the Private Boolean false, turn the lamp on, and if it is 15
+degrees or colder outside also light the fireplace; then wait for motion to stay inactive for
+ten minutes, reset the Private Boolean, and turn both off.
+
+**Corrected 2026-10-07.** This example originally read action 2's time as a timeout ("wait up
+to ten minutes"). It is a duration: the 2026-10-07 scan of this rule stores `durChoice.2 = true`,
+which is Use Duration (17.1), so the wait ends only once motion has stayed inactive for the whole
+time. The time itself is in the action object's `delay` and mirrored in `delayHor.2` / `delayMin.2`
+/ `delaySec.2`, the wait's short names, not a Delay action's `delayHour` / `delayMinute` /
+`delaySecond`. Whether the value was ten minutes at the original reading cannot be rechecked; it
+is five now.
 
 Which is what the rule's own page says.
 
@@ -1519,13 +1655,13 @@ conditions 12 and 2 respectively.
 ### The subscription trap, live
 
 This rule's label at the time of reading was
-`Theatre Room Light and Fireplace (Required Expression false)`, and its complete
+`Lounge Light and Heater (Required Expression false)`, and its complete
 `eventSubscriptions` were:
 
     LOCATION / [Hub Name]
     LOCATION / [Hub Name]
 
-**No device subscriptions at all.** Theatre Room Motion Sensor, the rule's entire trigger, has
+**No device subscriptions at all.** Lounge Motion Sensor, the rule's entire trigger, has
 none. Because the Required Expression is false, Rule Machine has removed the trigger
 subscription and kept only what it needs to notice the expression becoming true again, which
 for a mode-and-time expression is location events alone.
@@ -1555,7 +1691,7 @@ A `getSetVariable` action's target is not in the action object. Same `.<n>`-suff
 settings convention as every other action:
 
     actSubType.2 = getSetVariable
-    xVarV.2      = TestHubUptime.
+    xVarV.2      = ExampleUptime.
 
 The value SOURCE is discriminated by `valStringOp.<n>`. Two source types observed:
 
@@ -1574,7 +1710,7 @@ String-target discriminator. A Number or Decimal target instead carries **`numOp
 observed values are `number`, `variable`, `device attribute` and `variable math`, with the
 value in `valNumber.<n>` and the math operands in `xVar3.<n>` / `xVar4.<n>` / `valConst.<n>` /
 `valMathOp.<n>`. Both key families are present on this hub (`numOp.1 = number`,
-`valNumber.1 = 405` on rule 3078; `valStringOp.3 = Set string` on rule 2992). A decoder that
+`valNumber.1 = 405` on rule 535; `valStringOp.3 = Set string` on rule 534). A decoder that
 looks only for `valStringOp` reads a numeric Set Variable action as having no source.
 **[strong]**
 
@@ -1582,10 +1718,10 @@ How each `numOp` value names its source, from fixtures on this hub: **[single]**
 
 | `numOp.<n>` | Source fields | Fixture |
 | --- | --- | --- |
-| `number` | `valNumber.<n>` | rule 3078 |
-| `variable` | `xVar3.<n>` holds the variable copied; `valOffset.<n>` (number, UI default `0`) is added to it. A row without `valOffset` throws `Ambiguous method overloading for method java.lang.Long#plus` when it runs and leaves the target unchanged | rule 3397 (UI-built, fw 2.5.1.183) |
-| `variable math` | `xVar3.<n>` and `xVar4.<n>` are the operands, `valMathOp.<n>` the operator; the literal `(constant)` in either slot means the number in `valConst.<n>` / `valConst2.<n>` | rule 3079 |
-| `add number` | `valNumber.<n>` is added to the target's current value, so the target is also read | rule 2100 |
+| `number` | `valNumber.<n>` | rule 535 |
+| `variable` | `xVar3.<n>` holds the variable copied; `valOffset.<n>` (number, UI default `0`) is added to it. A row without `valOffset` throws `Ambiguous method overloading for method java.lang.Long#plus` when it runs and leaves the target unchanged | rule 539 (UI-built, fw 2.5.1.183) |
+| `variable math` | `xVar3.<n>` and `xVar4.<n>` are the operands, `valMathOp.<n>` the operator; the literal `(constant)` in either slot means the number in `valConst.<n>` / `valConst2.<n>` | rule 536 |
+| `add number` | `valNumber.<n>` is added to the target's current value, so the target is also read | rule 510 |
 
 `add number` is not in the value list the community MCP Rule Server documents, so treat the
 enum as open.
@@ -1596,8 +1732,8 @@ on 2.5.1.183 are `Set string`, `Remove string`, `Replace string`, `Token`, `Devi
 `Set from HTTP POST response`, `Set from local file`, `LowerCase string`, `Format DateTime`,
 `Copy variable` and `Rule Function`. A copy stores `valStringOp.<n> = Copy variable` with the
 source in the same `xVar3.<n>` slot the numeric copy uses; built by hand in the Rule Machine UI
-(rule 3375: `valStringOp.1 = Copy variable`, `xVar3.1 = AMGateA_Shared`, rendered
-"Set GT1 to AMGateA_Shared"). **[single]** The Boolean and DateTime copy pickers are
+(rule 538: `valStringOp.1 = Copy variable`, `xVar3.1 = SharedText`, rendered
+"Set TargetText to SharedText"). **[single]** The Boolean and DateTime copy pickers are
 **[unknown]**.
 
 **`xVarV.<n>` does not tell you the namespace.** Rule-local variables and Hub Variables share
@@ -1612,7 +1748,7 @@ not variable names. **[external]**
 Same slot a device condition uses, typed `Variable` instead of a capability name:
 
     rCapab_3  = Variable         the condition-side counterpart to tCapab1 on triggers
-    xVar_3    = TestHubUptime.
+    xVar_3    = ExampleUptime.
     RelrDev_3 = ≠                comparison operator
     state_3   = 0                compare value
 
@@ -1625,12 +1761,12 @@ The underscore convention documented in section 6 for device conditions (`rDev_<
 A rule can fire when a Hub Variable itself changes, not just reference one after the fact:
 
     tCapab1 = Variable
-    xVar1   = TestHubUptime.     no underscore - trigger-side, not condition-side
+    xVar1   = ExampleUptime.     no underscore - trigger-side, not condition-side
 
 The event subscription this produces is a genuinely different shape from every device
 trigger elsewhere in this document:
 
-    { "type": "LOCATION", "name": "variable:TestHubUptime.", "typeId": 1, "typeName": "<hub name>" }
+    { "type": "LOCATION", "name": "variable:ExampleUptime.", "typeId": 1, "typeName": "<hub name>" }
 
 against a device trigger's `{ "type": "DEVICE", "typeId": <deviceId>, "name": <attribute> }`.
 **[single]**
@@ -1645,9 +1781,9 @@ rather than assuming it. **[single]**
 
 ### 13.5 The trailing period is not a picker artifact
 
-`TestHubUptime.` carries a trailing period everywhere a setting refers to it - `xVarV`,
-`xVar_`, `xVar`, and a `p.TestHubUptime.` state-cache key. A second variable created fresh in
-the same session, `TestConcat`, carries no such artifact anywhere it appears.
+`ExampleUptime.` carries a trailing period everywhere a setting refers to it - `xVarV`,
+`xVar_`, `xVar`, and a `p.ExampleUptime.` state-cache key. A second variable created fresh in
+the same session, `ExampleConcat`, carries no such artifact anywhere it appears.
 
 Best explanation available: the period belongs to that one variable's own internal record - a
 `formerState` field alongside it suggests a rename at some point - not a general property of
@@ -1663,7 +1799,7 @@ build logic that depends on the period meaning anything in particular.
 A "Set string" value can embed another variable's live value inline:
 
     valStringOp.1 = Set string
-    valString.1   = %TestHubUptime%
+    valString.1   = %ExampleUptime%
 
 No trailing period here, unlike 13.1-13.4, even though it names the same variable - the
 period is a property of the enum-picker settings specifically (13.5), not of the name.
@@ -1722,6 +1858,12 @@ where to look, not as findings of this document.
   `<name>.multiple=true` sidecar flips it false, after which every page render throws
   `Command 'size' is not supported by device '<label>'`, `eventSubscriptions` stays at zero,
   and the rule is inert until the whole three-field group is re-posted.
+  **Corroborated on a specimen, 2026-10-04, so this item is no longer purely [external].** A native
+  Rule Machine export of rule 541 taken from this hub on 2026-09-21 carries 167 `appSettings`
+  records and **every one of them has a `multiple` field**: 19 `true`, 148 `false`. Example:
+  `{"deviceList": null, "multiple": true, "name": "modesX9", "type": "enum", "value": "[\"2\"]"}`.
+  The flag is therefore part of RM's own serialisation, not an artefact of the wizard path, and any
+  writer that drops it on those 19 reproduces the failure above.
 - Rule Machine never renumbers after a delete. Indices keep their gaps, the next add takes
   `max + 1`, and an emptied row persists as a present key with a blank value. This hub shows
   the same pattern (four `actSubType.<n>` rows with an empty value).
@@ -1751,9 +1893,31 @@ either alone.
 
 `trackSwitch.<n>` and `useLastDev.<n>` make an action read the triggering event instead of a
 stored device, and `optSwitch.<n>` ("command only switches that are on?") changes what an
-on/off action does once a device is chosen. All three are present on this hub in quantity
-(249 `optSwitch`, 190 `trackSwitch`, 44 `useLastDev` rows), but their effect on decoding is
-recorded from the MCP source.
+on/off action does once a device is chosen.
+
+**Counted on this hub 2026-10-07, every rule read:** 245 `optSwitch`, 186 `trackSwitch`, 49
+`useLastDev` rows. (An earlier count of 249 / 190 / 44 predates rules being added and removed,
+including five probe rules; prefer the dated figure.) **Of those 480 rows, exactly one is
+`true`:** rule 509 `_System Start` action 16, a `getOnOffSwitch` with `optSwitch.16 = true`.
+
+Rule Machine surfaces the qualifier in its own rendered text, so a reader comparing against the
+page can see it:
+
+```
+Off: _Restart (Command only switches that are on)      optSwitch true
+On: Wake Speakers                                optSwitch absent
+```
+
+`trackSwitch` and `useLastDev` are present on 235 rows between them and `true` on none. That says
+Gordon has never switched them on, which is weaker than saying Rule Machine cannot: the behaviour
+when they are on remains unobserved here.
+
+**What readers do with them, from Automation Map 2.4.14.** The decoder publishes each only when
+it is `true`: `optSwitch.<n>` as `onlyIfCurrently` (the opposite of the command, so rule 509
+action 16 publishes `onlyIfCurrently: on` on an Off), `trackSwitch.<n>` as `trackEventSwitch`, and
+`useLastDev.<n>` as `useLastDevice`, the last also on `getDefinedAction`. The 2026-10-07T08:57:53Z
+scan publishes exactly one, rule 509 action 16. HAI's converter refuses all three by name,
+`RM_ACT_SWITCH_OPTION`, rather than copying a plain on/off that would reach every listed device.
 
 **Scenes**
 
@@ -1773,3 +1937,355 @@ stored as a plain device reference and reads as one.
 - Rule-local variables are deleted through a two-step button flow on `/installedapp/btn`:
   `name=<varName>` with `stateAttribute=deleteGV`, then `name=delConfirm` with
   `stateAttribute=deleteConfirm`.
+
+## 15. Native export and import (the reverse direction)
+
+Rule Machine rules can be exported and re-imported through Hubitat's own **Settings > Restore Apps**
+user workflow. This is a supported path for a person, not an API: nothing here is callable, and this
+document still writes nothing. Recorded because it is the inverse of everything above and is the
+lowest-risk reverse direction known to us.
+
+Observed on the 2026-09-21 specimen of rule 541. Envelope:
+
+```
+{ deviceReplacements, appReplacements, appData: { "<appId>": { state, appSettings, subscriptions } } }
+```
+
+- `deviceReplacements` is a **map keyed by the source hub's device id**, not a list. Six entries on
+  this specimen, each `{deviceName, deviceLabel, deviceTypeName, deviceTypeNamespace}`.
+- `appReplacements` is the same shape keyed by app id, carrying `appTypeName`, `appTypeNamespace`,
+  `appType`, `appName`, `appLabel`.
+- `appData.<id>` carries the same `state` and `appSettings` this document decodes, plus
+  `subscriptions`.
+
+**The binding hazard.** Because the replacement maps are keyed by the *source* device and app ids,
+an import onto a hub where those ids mean something else re-points the rule by whatever the import
+UI resolves the name, label and type to. On the same hub the ids should match, but "should" is not
+an acceptance criterion: anything generating an export for re-import must assert the resulting
+device bindings explicitly rather than assume them.
+
+### 15.1 Import and Restore are different actions
+
+**[external]** Per Hubitat staff, Settings > Restore Apps offers two distinct actions. **Import**
+creates a new app id. **Restore** may replace the app matching the **source** id recorded in the
+file. Reference: `https://community.hubitat.com/t/restoring-backups-of-individual-rules/90548`.
+
+The specimen file carries `appData` and `appReplacements` both keyed `541`, and app 541 is a live
+rule on this hub (`_HAI Complex Regression Gauntlet (RM Export Source)`). **A Restore performed where
+an Import was intended therefore overwrites a working rule with the file's contents.** This is the
+highest-severity hazard in the reverse direction, above the device-binding hazard in section 15.
+
+### 15.2 `type=time` settings do not survive the round trip, and the export is where it breaks
+
+Observed 2026-10-04. Two stress rules built from the native export of 541 were imported on this hub.
+Both arrived paused and both then threw from `mainPage` and the `updated` handler:
+
+```
+Unparseable date: "2000-01-01T22:00:00+08:00"
+```
+
+**Attributed, not merely observed.** The same setting read live from app 541 and read from the
+export of that same app do not match:
+
+| source | `startingA13` |
+| --- | --- |
+| live hub (`/installedapp/statusJson/541`) | `2000-01-01T22:00:00.000+0800` |
+| native export file | `2000-01-01T22:00:00+08:00` |
+
+The export drops the milliseconds and rewrites the zone offset from `+0800` to `+08:00`. Rule
+Machine stores the first form and cannot parse the second, and the thrown message quotes the
+**export's** form. So the loss is in the export serialisation, not in the import and not in a
+newly created app's parse context.
+
+Rule 541 itself runs with the live form in place, which is what makes this a defect in the
+round trip rather than a bad fixture.
+
+**Established 2026-10-04 by importing the pair.** Two files differing in exactly two leaves,
+opposite outcomes:
+
+| `type=time` value | resulting page |
+| --- | --- |
+| `2000-01-01T22:00:00+08:00` (export form) | no title, no sections, throws |
+| `2000-01-01T22:00:00.000+0800` (stored form) | title, three sections, clean |
+
+So the stored form imports cleanly and the export form does not. These two files are the
+reproduction pair below. Both imports were deleted.
+
+**A free diagnostic.** The broken import never acquired Rule Machine's `(Paused)` label suffix,
+because the render that would have added it is the render that failed. Absence of that suffix on a
+rule that should carry it is therefore a symptom visible in an app list without opening anything.
+
+**Does not generalise past `type=time`.** See section 16: `atTime1` stores a bare `HH:MM` under the
+same declared type. The encoding belongs to the setting name, so a generator must emit per name and
+refuse any name whose encoding it has not observed in live storage.
+
+**Consequence for anything generating an RM export:** a generated file containing a time-of-day
+condition produces a rule that breaks on its own page. Emit `type=time` values in RM's own stored
+form, and verify against a live rule rather than against an exported one.
+
+#### Reproduction pair
+
+Two files in `hubitat-automation-intelligence`, under
+`examples/rm-migration-stress/evidence/`:
+
+- `known-failing-time-between.json` - the export's form
+- `candidate-stored-format-time-between.json` - RM's stored form
+
+Verified leaf by leaf: **exactly two leaves differ**, both time values
+(`appSettings[10].value` and `appSettings[57].value`). Everything else is identical, so an import
+result is attributable to the encoding alone.
+
+Both are keyed to source id `999999`, which does not exist on this hub, so Import and Restore
+converge on harmless behaviour (see 15.1). The safety is in the file, not in the instructions.
+
+**Method note.** Both derive from the complex export of 541 rather than being hand-built minimal
+rules. A hand-written RM export has never been shown to be a valid RM export, so a failure could not
+have separated "the time encoding is wrong" from "we cannot author an RM file at all". Changing two
+leaves of a known-good export removes that confound.
+
+**Both files were imported on 2026-10-04**, with the result in the table above: the stored form
+loads cleanly and the export form throws. An earlier draft said neither had been imported; that
+predated the import.
+
+## 16. `type` is not a format discriminator
+
+Observed 2026-10-04 on two live rules. The same declared `type=time` carries two incompatible
+value formats:
+
+| rule | setting | type | stored value |
+| --- | --- | --- | --- |
+| 544 | `atTime1` | `time` | `13:12` |
+| 544 | `atDate1` | `date` | `2027-01-01` |
+| 541 | `startingA13` | `time` | `2000-01-01T22:00:00.000+0800` |
+| 541 | `endingA13` | `time` | `2000-01-01T06:00:00.000+0800` |
+
+A specific-time trigger stores bare `HH:MM`. A between-times condition stores a full ISO timestamp
+with a year-2000 anchor, milliseconds and a colon-free offset. Both are valid strings in a
+`type=time` slot, and **nothing in the data distinguishes them except the setting name**, which
+identifies the control that wrote it.
+
+**For a reader:** derive the format from the setting name family (`atTime*` versus
+`startingA*`/`endingA*`), never from `type`.
+
+**Why this made 15.2 hard to see.** A serialiser that normalises anything resembling a timestamp
+reshapes the ISO form and leaves `13:12` untouched, so the export defect appears on some rules and
+not others with no visible pattern. That is the shape diagnosed as "one broken rule" rather than
+"a lossy exporter".
+
+**Scope.** Two rules, two control families, both read from live storage. Nobody has enumerated the
+families, so this is demonstrated rather than general: treat an unobserved setting name as unknown
+format rather than assuming either form.
+
+## 17. Waits, measured on the hub (2026-10-07)
+
+Measured against probe rules built for the purpose, because the hub held no example of several of
+these cases. Probe rules 547 to 551 remain on the hub, paused, as the only instances.
+
+### 17.1 `durChoice.<n>` is the Use Duration flag, and the time lives in the delay fields
+
+A Wait for Expression (`getWaitRule`) stores its time in the **same fields a per-action delay
+uses**: `delayAct.<n>` plus the short `delayHor.<n>` / `delayMin.<n>` / `delaySec.<n>`, with the
+time also in the action object's `delay` (`h:mm:ss`), which is what Automation Map reads. A plain
+Delay action (`getDelay`) does **not** use these: it stores `delayHour` / `delayMinute` /
+`delaySecond` (section 7). The time alone cannot say which kind of wait it is. `durChoice.<n>` is the discriminator:
+
+| `durChoice.<n>` | meaning |
+| --- | --- |
+| `true` | Use Duration: hold the expression true for that long |
+| `false`, absent or empty | Timeout: give up after that long |
+
+Probe rule 547 holds one of each, identical in every other field: action 1 `durChoice true` with
+`delayMin 2`, action 2 `durChoice false` with `delayMin 3`.
+
+**Every Wait for Expression on this hub that stores a time has `durChoice = true`, except the
+probes built to measure the other case.** The 2026-10-07T08:57:53Z scan holds fourteen timed
+`getWaitRule` actions: eleven in ordinary rules (501, 508, 514, 515, 516, 517, 518, 520, 521,
+522, 524), all `true`; and three in probes, 547 action 1 (`true`) and the only two Timeouts,
+547 action 2 and 549 action 1. Before 547 existed there was no Timeout anywhere, which is why
+publishing that time under the name `timeoutSeconds` was wrong on all eleven and went unnoticed.
+
+Because `getWaitRule` carries `delayAct.<n>`, reading that as a per-action delay publishes a wait
+before the wait, and a rebuilt rule waits twice.
+
+### 17.2 A timeout expires and the rule CONTINUES
+
+Measured on probe 549: a ten second timeout on a condition that can never become true. Trigger at
+00:57:35, the action after the wait ran at 00:57:45. It holds for the full timeout and then carries
+on. It does not abandon the remaining actions.
+
+### 17.3 Wait for Events: one per rule, stored rule-globally
+
+`getWaitEvents` does **not** store its events under the action. They live in a rule-global dash
+namespace: `tCapab-1`, `tDev-1`, `tstate-1`, `stays-1`, `SHours-1` / `SMins-1` / `SSecs-1`,
+`modesX-1`. The suffix is a negative-looking `-N`, unrelated to action numbering.
+
+**Rule Machine therefore allows exactly one Wait for Events per rule.** A second one silently
+overwrites the first, in Hubitat's own editor as well as through the API. There is consequently no
+action-to-events binding to resolve and no ambiguity to decode.
+
+A Mode event inside a wait stores as **`modesX-<n>`**, the dash form of the trigger's no-dash
+`modesX<n>`. A decoder reading the trigger spelling publishes an empty Mode event rather than
+failing, which is the worse outcome.
+
+### 17.4 Wait for Events has no `durChoice`, and its time means only one thing
+
+The wizard's live field list for a `getWaitEvents` action is:
+
+```
+actSubType, actType, actionCancel, anotherWait,
+delayAct, delayHor, delayMin, delaySec, doneWaits
+```
+
+Writing `durChoice` to it is rejected as `not_in_schema`. So a Wait for Events time has a single
+meaning and needs no discriminator; its absence is not missing data.
+
+`anotherWait` and `doneWaits` suggest the wizard can chain more than one wait inside a single action.
+No rule on this hub uses them and they are **not** investigated here.
+
+### 17.5 A multi-event wait continues on the FIRST event, and a stays clause does not gate it
+
+Measured on probes 548 and 550. Two events in one wait, only the first tripped: execution continued
+while the second event's device still read its original state.
+
+Adding `andStays` to a sibling event does not change this. Probe 550 paired a contact event with a
+motion event carrying `andStays 30s`; tripping the contact continued the rule in the **same second**,
+with the stays event never completing. A stays clause belongs to its own event rather than to the
+wait as a whole.
+
+## 18. More fields whose names mislead
+
+Section 7.7 already records that a field which stops applying keeps its last value, and the orphaned
+pickers note records the same for condition indexes. These are further instances, all measured on
+2026-10-07. The pattern is the same one, and it keeps producing confident wrong answers rather than
+refusals.
+
+### 18.1 `garageRL.<n>`: empty is OPEN, `true` is CLOSE
+
+`getOCGarage` stores its devices under **`garageOpenClose.<n>`**, not a shared device key, and the
+direction in `garageRL.<n>`:
+
+| `garageRL.<n>` | rendered by Rule Machine as |
+| --- | --- |
+| empty | `Open:` |
+| `true` | `Close:` |
+
+Rule 526 holds one of each on the same opener, and rule 523 is named "Roller Door Autoclose" and
+stores `true`. The name reads as Raise/Lower, so `true` looks like raise looks like open. It is the
+opposite, and reading it the obvious way opens a garage door that should have closed.
+
+There is no `toner.<n>` on this action. `getMuteUnmute` likewise keeps its devices under
+**`muteUnmute.<n>`** with a flag `mU.<n>`; only one instance exists on this hub and it is empty, so
+that flag's two states are **not** established.
+
+### 18.2 `siren.<n>` can outlive a `getChime` at the same index
+
+Rule 528 action 66 is a `getChime`. It stores `chime.66` holding Hall Siren **and**
+`siren.66` holding Shed Siren. Rule Machine's own page renders only:
+
+```
+Chime: Play Sound on Hall Siren sound number 1
+```
+
+"Shed" does not appear anywhere on that rule's page. `siren.<n>` belongs to a siren subtype and its
+presence beside a chime is residue from a previous action at that index.
+
+**The general rule:** a setting belongs to an action only when the action's own subtype claims it. An
+audit against this found every action decoder reads exactly one device key except Message, below.
+
+### 18.3 `isCondTrig.<n>` can outlive the trigger it described
+
+A `tCapab<n>` with no `tDev<n>` is a leftover trigger family. Reading `isCondTrig.<n>` as evidence a
+trigger exists, and then filling its devices from the condition namespace (`rDev_<n>`), resurrects
+that leftover as a trigger Rule Machine does not have.
+
+Two rules on this hub were affected, failing in opposite directions:
+
+- **814** published a Presence trigger at index 27. The hub's `trigDevs` is empty and the presence
+  clause is the Required Expression (`eval {"0": [35]}`). A copy would have fired on every presence
+  change instead of at 20:00.
+- **528** published a Motion trigger at index 13, built from `tCapab13 = Switch` (no `tDev13`) with
+  condition 13's Motion devices. The published capability did not even match the family it came from.
+  A copy would have carried `switch is active` on four motion sensors: a trigger that can never fire.
+
+**`trigDevs` is the authoritative source for device triggers.** It maps `<deviceId>:<Capability>` to
+trigger numbers, and `capabstrue` holds the rendered trigger list. A trigger exists when those say so;
+`isCondTrig` should annotate a trigger already established, never create one. A sweep of all 75 rules
+on the hub at the time against `trigDevs` found exactly these two. (The 2026-10-07T08:57:53Z scan
+fixture holds 81 Rule-5.1 rules, the difference being probe rules added since; the sweep was not
+repeated.)
+
+Not every leftover produced a phantom. Rule 529 stores the same shape as 528, `tCapab13 =
+Switch` with no `tDev13` (recorded in Automation Map 2.4.14's `DEVICELESS_TRIGGERS` comment), and
+the 2026-10-07 scan publishes only its real trigger, Switch at index 40; the scan holds no
+condition 13 on that rule for a fallback to borrow devices from. The leftover is harmless only for as long as every reader drops a device family
+with no `tDev<n>`.
+
+### 18.4 The display path repeated 18.3 independently
+
+The phantom-trigger defect in 18.3 existed twice in Automation Map, in two readers of the same
+format, found and fixed separately. The decode path built a trigger from a leftover `tCapab<n>`; the
+display path emitted one step per `tCapab<n>` with the same result. Both were corrected in 2.4.13.
+
+Worth recording because the lesson is not about one decoder. A format where a leftover key looks like
+a live one will be misread by every independent reader of it, and fixing one says nothing about the
+others. `trigDevs` is the check that works for any of them.
+
+## 19. Message (`getMsg`) reads two device keys, and both can be live
+
+Message is the one action subtype that legitimately reads two device keys: `note.<n>` for notify
+targets and `speakDevice.<n>` for speech targets, with `speakVolume.<n>` beside it.
+
+Audited on 2026-10-07 across all **35** Message actions on this hub, comparing stored values against
+each rule's own Rule Machine page text:
+
+- 13 store a `speakDevice.<n>`, 22 are notify-only, none store neither.
+- **Every stored device appeared in Rule Machine's rendered text.** No device residue was found, so
+  there is no `siren.66`-style trap in the device keys on this hub. The volume is another matter;
+  see below.
+- Four store both keys and Rule Machine renders both, for example rule 511 action 7:
+  `Notify Phone and Speak on Hall Speaker - Smart Speaker`.
+- Rule 530 is the useful counter-case: it speaks on four speakers and sets the volume of a fifth it
+  does not speak on. Storage and page agree, so a decoder that inferred speech targets from the
+  volume action would be wrong.
+
+**There is no separate on/off key for speaking.** The presence of `speakDevice.<n>` is itself the
+switch; the auxiliary keys observed are `speakVolume`, `volume`, `mediaDevice`, `msg`, `ranMsg`,
+`uVar` and `xVar`. Because the switch is the key's presence rather than a flag, a turned-off speak
+leaves no device behind to misread.
+
+**It can leave a volume behind.** `speakVolume.<n>` does outlive its speaker: Automation Map's
+2.4.14 decoder records 8 notify-only messages on this hub holding a leftover `speakVolume` from a
+speaker since removed (comment in the `getMsg` case of `hamDetailActionOperands`), the same
+stale-sibling trap as rule 503's 22:00 in 7.7. So read `speakVolume.<n>` only when
+`speakDevice.<n>` is present. The 2026-10-07T08:57:53Z scan publishes a volume on 7 of the 35
+messages, all of them speaking ones. That count of 8 comes from the decoder's own audit; the
+scan fixture does not carry raw message settings, so it cannot be recounted from there.
+
+Not established: whether Rule Machine can leave a `speakDevice.<n>` behind at all. The audit shows it
+has not on this hub, which is weaker than showing it cannot.
+
+## 20. Trigger capability labels are not stable strings
+
+`tCapab<n>` holds a display label, and Rule Machine has changed some of them while keeping the
+storage shape identical. On this hub:
+
+| Stored label | Rows |
+| --- | --- |
+| `Certain Time (and optional date)` | 7 |
+| `Certain Time` | 1 |
+
+Rule 502 trigger 26 carries the short form with exactly the same fields as the long one:
+
+```
+tCapab26  "Certain Time"
+time26    "A specific time"
+atTime26  "21:05"
+```
+
+**A decoder keyed on the long label dropped this trigger entirely, and the rule then read as having
+no triggers at all.** That is worse than refusing it: a rule with no published trigger invites a
+consumer to treat it as invoked by something else, so the copy becomes a rule that never fires at
+21:05. Found 2026-10-07 and fixed in Automation Map 2.4.12.
+
+Match these labels by prefix or by the fields present, not by exact string. One rule in eight here
+carries the older spelling, and nothing marks it as older.
