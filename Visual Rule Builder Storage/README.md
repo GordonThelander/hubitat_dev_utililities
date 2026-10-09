@@ -8,6 +8,10 @@ two live, paused VRB rules on a Hubitat C-8 running platform 2.5.1.152. It is de
 more cautious than the Rule Machine storage reference because the observed corpus is still
 small.
 
+**Re-checked 2026-10-09** on platform 2.5.2.134 against an existing VRB 2.0 rule: the `graph`
+format, version 1, node kinds, `next` / `true` / `false` edge ports and `config` device-id arrays are
+unchanged.
+
 ## Contents
 
 | Path | Purpose |
