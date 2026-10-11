@@ -41,7 +41,7 @@ renumbered. Some subsections were therefore added out of numeric order, and 6.2 
 exist. In document order:
 
 - 1 Scope and warnings - 2 Where the data lives - 3 The shape of a rule (3.1, 3.2) - 4 Execution order
-- 5 Conditions and expressions: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6 (5.6.1), 5.7
+- 5 Conditions and expressions: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6 (5.6.1), 5.7, 5.8, 5.9
 - 6 Separating triggers from conditions: 6.1, 6.4
 - 7 Action parameters by family: 7.4, 7.2, 7.3, 7.5, 7.1, 7.6, 7.7 (7.7.1)
 - 8 Acting on other rules - 9 Traps: 9.1 to 9.7 - 10 What the data cannot tell you: 10.1 to 10.3
@@ -506,9 +506,9 @@ The condition and trigger sides use the same asymmetry as `tDev`/`rDev_`: **[str
 Comparator values are stored as the glyph, not ASCII: `RelrDev_2` on rule 533 reads `≠`,
 never `!=`. String comparisons are stored as asterisk-wrapped literals, `*changed*` and
 `*contains*`; there is no "does not contain", which is `not<n>` plus `*contains*`.
-**[strong]** For the device-relative shape the MCP server's source reports that `state_<n>`
-carries the offset rather than a comparison value, so `state_<n>` is not always "the value".
-**[external]**
+**[strong]** For the device-relative shape `state_<n>` carries the offset rather than a
+comparison value, so `state_<n>` is not always "the value"; this was first taken from another
+tool's source and has since been observed directly (5.8). **[strong]**
 
 Time values are polymorphic. `atTime<n>` holds `21:05` for a daily trigger, and a full ISO
 datetime for a one-shot dated trigger. **[external, for the ISO form]** A time range writes
@@ -588,6 +588,104 @@ is the signal, not a missing field to default.
 
 This is why rule 528 would have copied into a rule that never ran even after its phantom trigger
 (18.3) was removed: the phantom was the loud defect, this is the quiet one underneath it.
+
+### 5.8 Required Expression condition pickers, measured by writing each one
+
+Everything above was worked out by reading rules that already existed. This section was
+produced the other way round: each condition was **written** into a Required Expression on a
+2.5.2.x hub, one capability at a time, and the resulting settings read back. That gives a
+complete key list per capability rather than whatever the surveyed rules happened to use, and
+it shows which pickers a capability does *not* get. Findings are **[strong]**: every key below
+was written and read back at least once, but on one hub and one firmware.
+
+`useST = "true"` marks a rule that has a Required Expression. Conditions are numbered from 1
+and the numbering is shared across capabilities.
+
+**The common triple.** A device-state condition writes `rCapab_<n>` (the capability name as the
+picker spells it, e.g. `Switch`, `Window Shade`), `rDev_<n>` (the device map) and `state_<n>`
+(the state word). Water, smoke, carbon monoxide and tamper behave as discrete states here, not
+as numeric comparisons: `wet`, `detected`, `active`.
+
+**Numeric.** The same triple plus `RelrDev_<n>` for the comparator. `state_<n>` is typed by the
+capability: a temperature condition stores it as `decimal`, humidity and illuminance as
+`number`.
+
+**Fan Speed is not numeric, despite sitting with the numeric capabilities in the picker list.**
+A write of `RelrDev_<n>` to a Fan Speed condition is rejected — the page offers no comparator
+field, only `rDev_<n>`, `state_<n>` and `not<n>` — and the speed lands in `state_<n>` as an enum
+word (`medium`). Treat it as a device-state condition.
+
+**Device-relative comparison.** `isDev_<n> = "true"` reveals a reference-device picker,
+`relDevice_<n>`, holding a single device map. `RelrDev_<n>` is the comparator, and `state_<n>`
+holds the **offset**, not a threshold: a "greater than that device, minus two" condition stores
+`state_<n> = "-2"`. Section 5.5 previously carried this as **[external]** from another tool's
+source; it is now observed directly.
+
+**NOT** is a separate boolean beside the condition's own keys: `not<n> = "true"`.
+
+**Mode and Private Boolean.** A Mode condition writes `modes<n>` with mode **ids**
+(`["5"]`) and no device or state key. Private Boolean writes `state_<n>` alone and exists only
+in a Required Expression, not in an IF expression.
+
+**Variable.** `xVar_<n>` is the variable name, `RelrDev_<n>` the comparator, `state_<n>` the
+value. Three variations:
+
+| Shape | Extra keys |
+| --- | --- |
+| variable vs constant | none |
+| variable vs variable | `isVar_<n> = "true"`, `xVarR_<n>` = the right-hand variable name |
+| boolean variable | **no comparator at all**; `state_<n>` is `"true"` / `"false"` |
+
+A string comparison stores the comparator verbatim with the asterisks, `RelrDev_<n> =
+"*contains*"`, and the substring in `state_<n>`.
+
+**Custom Attribute.** `rDev_<n>` is typed `capability.*` rather than a specific capability, and
+the attribute name is in its own key, **`rCustomAttr_<n>`**, with `RelrDev_<n>` and `state_<n>`
+as usual. A reader that walks only the `rCapab_/rDev_/state_` triple loses the attribute and is
+left with a condition that names no attribute to test.
+
+**Between two times** writes `starting<n>` and `ending<n>` as mode words (`A specific time`,
+`Sunrise`), the clock value in `startingA<n>` / `endingA<n>` as a **full ISO timestamp whose
+date part is a placeholder** (`2000-01-01T22:00:00.000+0800`), and a sunrise/sunset offset in
+`endSunriseOffset<n>` (and the start-side equivalents). `atOrBetween<n> = "false"` accompanies
+the range form.
+
+**The three date and day pickers**, none of which reuses `state_<n>`:
+
+| Condition | Keys |
+| --- | --- |
+| Days of week | **`days<n>`** — a list of day names, e.g. `["Thursday"]` |
+| Between two dates | `startDateType<n>`, `monthStart<n>`, `dayStart<n>`, `endDateType<n>`, `monthEnd<n>`, `dayEnd<n>`; the type is `mm-dd` |
+| On a Day | `startDateType<n>`, `monthStart<n>`, `dayStart<n>` — the **start keys only**, since a single day has no end |
+
+**A naming trap.** `days<n>` and `modes<n>` have **no underscore**, while every condition key
+around them does (`rCapab_<n>`, `rDev_<n>`, `state_<n>`, `not<n>` is also undotted but
+unsuffixed). Code that builds condition keys by appending `_<n>` will silently miss the day and
+mode pickers.
+
+**Operators and parentheses are not settings.** They live in the expression token list, so a
+settings-only reader sees the conditions but not how they combine. A parenthesised expression
+reads as tokens `["1","AND","(","2","OR","3",")","XOR","4"]`.
+
+### 5.9 A disabled action is rule state, not a setting
+
+Rule Machine's "disable an action" does not write a setting on the action row. It writes two
+**state** fields: **[strong]**
+
+- `setDisabledActs = true` — the disable mode is on for this rule;
+- `disabledActions` — a list of the disabled action indices **as strings**, e.g. `["2"]`.
+
+The per-row controls are buttons named `disable<n>`, and they **toggle**: pressing the same
+button twice removes the row from the list again. One of them, `disableL`, is a row in its own
+right rather than a mode switch — pressing it adds `"L"` to `disabledActions`, and it also turns
+the mode flag on as a side effect.
+
+A disabled action is still present in `actions` with all of its parameters; only
+`disabledActions` says it will not run. A reader that ignores the list will show, and a
+converter will rebuild, an action the hub skips.
+
+Two rule-level options sit beside these as ordinary settings: `logging`, a multi-select enum of
+`Events` / `Triggers` / `Actions`, and `dValues`, the "Display current values" boolean.
 
 ## 6. Separating triggers from conditions
 
