@@ -12,6 +12,7 @@ copying its implementation.
 | File | Status | Purpose |
 | --- | --- | --- |
 | `rule_machine_5_1_storage_format.md` | Completed reference | Empirically documents the private Rule Machine 5.1 storage representation exposed by the hub. |
+| `rule_machine_5_1_action_storage.md` | Measured reference | Action by action: the keys each Rule Machine 5.1 action subtype writes, their values, the per-mode key shapes, and the booleans that read the wrong way round. Companion to the storage format reference. |
 | `rule_machine_execution_and_cross_rule_causality.md` | Research reference | Separates documented execution behaviour, author explanations, local observations, implemented extraction, and unvalidated proposals. |
 
 ## Start here
